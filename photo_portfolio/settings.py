@@ -38,15 +38,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-1y7#jo=bhn&4gmf26q35=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*', '.vercel.app', '.now.sh', 'localhost', '127.0.0.1']
-
-# Add Vercel-specific hosts
-if os.environ.get('VERCEL_ENV'):
-    ALLOWED_HOSTS.extend([
-        '.vercel.app',
-        '.now.sh',
-        os.environ.get('VERCEL_URL', ''),
-    ])
+ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app']
 
 
 # Application definition
@@ -92,7 +84,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'photo_portfolio.wsgi.application'
+WSGI_APPLICATION = 'photo_portfolio.wsgi.app'
 
 
 # Database
