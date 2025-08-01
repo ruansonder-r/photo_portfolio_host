@@ -1,15 +1,10 @@
 {
-  "builds": [
-    {
-      "src": "photo_portfolio/wsgi.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "15mb",
-        "runtime": "python3.10",
-        "maxDuration": 30
-      }
+  "functions": {
+    "photo_portfolio/wsgi.py": {
+      "runtime": "python3.10",
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
     {
       "src": "/static/(.*)",
@@ -26,9 +21,5 @@
   ],
   "env": {
     "DJANGO_SETTINGS_MODULE": "photo_portfolio.settings"
-  },
-  "buildCommand": "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput",
-  "outputDirectory": ".",
-  "installCommand": "pip install -r requirements.txt",
-  "devCommand": "python manage.py runserver"
+  }
 } 
