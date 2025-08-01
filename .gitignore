@@ -136,7 +136,7 @@ media/
 # Google Drive API
 token.json
 credentials.json
-*.json
+.creds/
 
 # IDE
 .vscode/
