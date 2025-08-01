@@ -1,10 +1,15 @@
 {
-  "functions": {
-    "photo_portfolio/wsgi.py": {
-      "runtime": "python3.10",
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "photo_portfolio/wsgi.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.10",
+        "maxDuration": 30
+      }
     }
-  },
+  ],
   "routes": [
     {
       "src": "/static/(.*)",
