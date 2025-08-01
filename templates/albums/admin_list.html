@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="mb-8">
-    <h1 class="text-4xl font-bold text-gray-800 mb-2">Album Management</h1>
-    <p class="text-xl text-gray-600">Manage client albums and their Google Drive integration</p>
+    <h1 class="text-4xl font-bold text-gray-800 mb-2">Private Album Management</h1>
+    <p class="text-xl text-gray-600">Manage client albums and generate sharing links</p>
 </div>
 
 <div class="mb-8">
@@ -34,17 +34,34 @@
                 <td class="px-6 py-4 text-sm text-gray-600">{{ album.date|date:"M j, Y" }}</td>
                 <td class="px-6 py-4 text-sm font-mono text-gray-700">{{ album.folder_name }}</td>
                 <td class="px-6 py-4 text-sm">
-                    <a href="{% url 'albums:album_detail' album_id=album.id %}" 
-                       target="_blank"
-                       class="text-blue-600 hover:text-blue-800 underline">
-                        View Album
-                    </a>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" 
+                               value="{{ album.full_url }}" 
+                               readonly 
+                               class="px-3 py-1 text-xs bg-gray-100 border border-gray-300 rounded text-gray-700 font-mono w-64"
+                               id="url-{{ album.id }}">
+                        <button onclick="copyToClipboard('url-{{ album.id }}')" 
+                                class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                            📋 Copy
+                        </button>
+                    </div>
                 </td>
                 <td class="px-6 py-4 text-sm">
-                    <a href="{% url 'admin:albums_clientalbum_change' album.id %}" 
-                       class="inline-flex items-center px-3 py-1 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors">
-                        ✏️ Edit
-                    </a>
+                    <div class="flex space-x-2">
+                        <a href="{% url 'albums:album_detail' album_id=album.id %}" 
+                           target="_blank"
+                           class="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
+                            👁️ View
+                        </a>
+                        <a href="{% url 'albums:generate_link' album_id=album.id %}" 
+                           class="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors">
+                            🔗 Generate Link
+                        </a>
+                        <a href="{% url 'admin:albums_clientalbum_change' album.id %}" 
+                           class="inline-flex items-center px-3 py-1 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors">
+                            ✏️ Edit
+                        </a>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
@@ -57,4 +74,30 @@
     <p class="text-gray-500">Create your first client album to get started.</p>
 </div>
 {% endif %}
+
+<script>
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    element.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        // Show success message
+        const button = element.nextElementSibling;
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied!';
+        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        button.classList.add('bg-green-600');
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('bg-green-600');
+            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy: ', err);
+    }
+}
+</script>
 {% endblock %} 

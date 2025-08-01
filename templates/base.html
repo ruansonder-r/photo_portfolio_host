@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ PHOTOGRAPHER_NAME }} Portfolio{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;600&display=swap" rel="stylesheet">
@@ -141,6 +142,9 @@
             transform: perspective(1000px) rotateY(0deg);
             transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .carousel-card:hover {
@@ -151,7 +155,7 @@
         .carousel-slide img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             object-position: center;
             display: block;
             transition: transform 0.6s ease;
@@ -237,6 +241,111 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         
+        /* Modal Carousel Styles */
+        .modal-carousel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-carousel.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-carousel-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-carousel-content {
+            position: relative;
+            width: 90%;
+            height: 90%;
+            max-width: 1200px;
+            max-height: 800px;
+        }
+        
+        .modal-carousel .carousel {
+            height: 100%;
+            min-height: auto;
+            max-height: none;
+            background: transparent;
+            padding: 0;
+            box-shadow: none;
+        }
+        
+        .modal-carousel .carousel-card {
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-carousel .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            z-index: 10010;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-carousel .carousel-nav:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .modal-carousel .carousel-prev {
+            left: 2rem;
+        }
+        
+        .modal-carousel .carousel-next {
+            right: 2rem;
+        }
+        
+        .modal-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10000;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
         .gallery-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -262,6 +371,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             transition: transform 0.3s ease;
+            cursor: pointer;
         }
         
         .gallery-item:hover {
@@ -377,6 +487,7 @@
                     <li><a href="{% url 'portfolio:home' %}">Portfolio</a></li>
                     <li><a href="{% url 'portfolio:contact' %}">Contact</a></li>
                     {% if user.is_staff %}
+                    <li><a href="{% url 'albums:admin_list' %}" class="admin-link show">Private Albums</a></li>
                     <li><a href="{% url 'admin:index' %}" class="admin-link show">Admin</a></li>
                     {% endif %}
                 </ul>
@@ -389,6 +500,20 @@
             {% block content %}{% endblock %}
         </div>
     </main>
+    
+    <!-- Modal Carousel -->
+    <div class="modal-carousel" id="modalCarousel">
+        <div class="modal-carousel-container">
+            <button class="modal-close-btn" id="modalCloseBtn">×</button>
+            <div class="modal-carousel-content">
+                <div class="carousel" id="modalCarouselInner">
+                    <!-- Modal carousel slides will be populated here -->
+                </div>
+                <button class="carousel-nav carousel-prev" id="modalCarouselPrev">●</button>
+                <button class="carousel-nav carousel-next" id="modalCarouselNext">●</button>
+            </div>
+        </div>
+    </div>
     
     <footer>
         <div class="container">
@@ -409,6 +534,13 @@
             let currentSlide = 0;
             const totalSlides = slides.length;
             let autoAdvanceInterval;
+            
+            // Touch/swipe variables
+            let touchStartX = 0;
+            let touchEndX = 0;
+            let touchStartY = 0;
+            let touchEndY = 0;
+            let isDragging = false;
             
             function updateCarousel() {
                 carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
@@ -436,7 +568,65 @@
                 }
             }
             
-            // Event listeners
+            // Touch event handlers for swipe navigation
+            function handleTouchStart(e) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isDragging = true;
+                stopAutoAdvance();
+            }
+            
+            function handleTouchMove(e) {
+                if (!isDragging) return;
+                
+                e.preventDefault(); // Prevent scrolling while swiping
+                touchEndX = e.touches[0].clientX;
+                touchEndY = e.touches[0].clientY;
+                
+                // Add visual feedback during swipe
+                const diffX = touchStartX - touchEndX;
+                const translateX = -currentSlide * 100 - (diffX / carousel.offsetWidth) * 100;
+                carousel.style.transform = `translateX(${translateX}%)`;
+            }
+            
+            function handleTouchEnd(e) {
+                if (!isDragging) return;
+                
+                isDragging = false;
+                const diffX = touchStartX - touchEndX;
+                const diffY = touchStartY - touchEndY;
+                const threshold = 50; // Minimum swipe distance to trigger navigation
+                
+                // Check for swipe down (close modal)
+                if (diffY > threshold && Math.abs(diffY) > Math.abs(diffX)) {
+                    if (carousel.closest('.modal-carousel')) {
+                        closeModalCarousel();
+                        return;
+                    }
+                }
+                
+                if (Math.abs(diffX) > threshold) {
+                    if (diffX > 0) {
+                        // Swiped left - go to next slide
+                        nextSlide();
+                    } else {
+                        // Swiped right - go to previous slide
+                        prevSlide();
+                    }
+                } else {
+                    // Swipe wasn't long enough, snap back to current slide
+                    updateCarousel();
+                }
+                
+                startAutoAdvance();
+            }
+            
+            // Event listeners for touch/swipe
+            carousel.addEventListener('touchstart', handleTouchStart, { passive: false });
+            carousel.addEventListener('touchmove', handleTouchMove, { passive: false });
+            carousel.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            // Event listeners for button navigation
             if (prevBtn) prevBtn.addEventListener('click', () => {
                 prevSlide();
                 stopAutoAdvance();
@@ -463,6 +653,10 @@
                     nextSlide();
                     stopAutoAdvance();
                     startAutoAdvance();
+                } else if (e.key === 'Escape') {
+                    if (carousel.closest('.modal-carousel')) {
+                        closeModalCarousel();
+                    }
                 }
             });
             
@@ -470,6 +664,149 @@
             updateCarousel();
             startAutoAdvance();
         }
+        
+        // Modal Carousel functionality
+        function openModalCarousel(images, startIndex = 0) {
+            const modal = document.getElementById('modalCarousel');
+            const modalCarouselInner = document.getElementById('modalCarouselInner');
+            
+            // Clear existing slides
+            modalCarouselInner.innerHTML = '';
+            
+            // Create slides for modal
+            images.forEach((image, index) => {
+                const slide = document.createElement('div');
+                slide.className = 'carousel-slide';
+                slide.innerHTML = `
+                    <div class="carousel-card">
+                        <img src="${image.download_url}" alt="${image.name}" loading="lazy">
+                    </div>
+                `;
+                modalCarouselInner.appendChild(slide);
+            });
+            
+            // Show modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+            
+            // Initialize modal carousel
+            window.modalCarousel = modalCarouselInner;
+            window.modalCurrentSlide = startIndex;
+            updateModalCarousel();
+            
+            // Initialize touch events for modal
+            initModalTouchEvents();
+            
+            // Add arrow button event listeners
+            const prevBtn = document.getElementById('modalCarouselPrev');
+            const nextBtn = document.getElementById('modalCarouselNext');
+            
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    prevModalSlide();
+                });
+            }
+            
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    nextModalSlide();
+                });
+            }
+        }
+        
+        function closeModalCarousel() {
+            const modal = document.getElementById('modalCarousel');
+            modal.classList.remove('active');
+            document.body.style.overflow = ''; // Restore scrolling
+            window.modalCarousel = null;
+        }
+        
+        function updateModalCarousel() {
+            if (window.modalCarousel) {
+                window.modalCarousel.style.transform = `translateX(-${window.modalCurrentSlide * 100}%)`;
+            }
+        }
+        
+        function nextModalSlide() {
+            if (window.modalCarousel) {
+                const slides = window.modalCarousel.querySelectorAll('.carousel-slide');
+                window.modalCurrentSlide = (window.modalCurrentSlide + 1) % slides.length;
+                updateModalCarousel();
+            }
+        }
+        
+        function prevModalSlide() {
+            if (window.modalCarousel) {
+                const slides = window.modalCarousel.querySelectorAll('.carousel-slide');
+                window.modalCurrentSlide = (window.modalCurrentSlide - 1 + slides.length) % slides.length;
+                updateModalCarousel();
+            }
+        }
+        
+        function initModalTouchEvents() {
+            if (!window.modalCarousel) return;
+            
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            let isDragging = false;
+            
+            function handleModalTouchStart(e) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isDragging = true;
+            }
+            
+            function handleModalTouchMove(e) {
+                if (!isDragging) return;
+                
+                e.preventDefault();
+                touchEndX = e.touches[0].clientX;
+                touchEndY = e.touches[0].clientY;
+                
+                const diffX = touchStartX - touchEndX;
+                const slides = window.modalCarousel.querySelectorAll('.carousel-slide');
+                const translateX = -window.modalCurrentSlide * 100 - (diffX / window.modalCarousel.offsetWidth) * 100;
+                window.modalCarousel.style.transform = `translateX(${translateX}%)`;
+            }
+            
+            function handleModalTouchEnd(e) {
+                if (!isDragging) return;
+                
+                isDragging = false;
+                const diffX = touchStartX - touchEndX;
+                const diffY = touchStartY - touchEndY;
+                const threshold = 50;
+                
+                // Check for swipe down (close modal)
+                if (diffY > threshold && Math.abs(diffY) > Math.abs(diffX)) {
+                    closeModalCarousel();
+                    return;
+                }
+                
+                if (Math.abs(diffX) > threshold) {
+                    if (diffX > 0) {
+                        nextModalSlide();
+                    } else {
+                        prevModalSlide();
+                    }
+                } else {
+                    updateModalCarousel();
+                }
+            }
+            
+            window.modalCarousel.addEventListener('touchstart', handleModalTouchStart, { passive: false });
+            window.modalCarousel.addEventListener('touchmove', handleModalTouchMove, { passive: false });
+            window.modalCarousel.addEventListener('touchend', handleModalTouchEnd, { passive: false });
+        }
+        
+        // Close button event listener
+        document.getElementById('modalCloseBtn').addEventListener('click', closeModalCarousel);
+        
+        // Make functions globally available
+        window.openModalCarousel = openModalCarousel;
+        window.closeModalCarousel = closeModalCarousel;
         
         // Initialize carousel when page loads
         document.addEventListener('DOMContentLoaded', initCarousel);

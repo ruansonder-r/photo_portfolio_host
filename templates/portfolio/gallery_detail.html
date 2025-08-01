@@ -19,10 +19,14 @@
 {% endif %}
 
 {% if images %}
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="galleryGrid">
     {% for image in images %}
     <div class="group">
-        <div class="relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+        <div class="relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer" 
+             data-image-index="{{ forloop.counter0 }}"
+             data-image-url="{{ image.download_url }}"
+             data-image-name="{{ image.name }}"
+             onclick="openModalFromGallery({{ forloop.counter0 }})">
             <img src="{{ image.download_url }}" alt="{{ image.name }}" loading="lazy" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">
             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <h3 class="text-white font-semibold text-sm">{{ image.name }}</h3>
@@ -37,4 +41,113 @@
     <p class="text-gray-500">This gallery is empty or unavailable.</p>
 </div>
 {% endif %}
+
+<script>
+function openModalFromGallery(startIndex) {
+    const galleryGrid = document.getElementById('galleryGrid');
+    const imageElements = galleryGrid.querySelectorAll('[data-image-index]');
+    
+    // Convert DOM elements to image data
+    const galleryImages = Array.from(imageElements).map(element => ({
+        id: element.dataset.imageIndex,
+        name: element.dataset.imageName,
+        download_url: element.dataset.imageUrl
+    }));
+    
+    // Use the global modal carousel function
+    window.openModalCarousel(galleryImages, startIndex);
+}
+
+function updateModalCarousel() {
+    if (window.modalCarousel) {
+        window.modalCarousel.style.transform = `translateX(-${window.modalCurrentSlide * 100}%)`;
+    }
+}
+
+function nextModalSlide() {
+    if (window.modalCarousel) {
+        const slides = window.modalCarousel.querySelectorAll('.carousel-slide');
+        window.modalCurrentSlide = (window.modalCurrentSlide + 1) % slides.length;
+        updateModalCarousel();
+    }
+}
+
+function prevModalSlide() {
+    if (window.modalCarousel) {
+        const slides = window.modalCarousel.querySelectorAll('.carousel-slide');
+        window.modalCurrentSlide = (window.modalCurrentSlide - 1 + slides.length) % slides.length;
+        updateModalCarousel();
+    }
+}
+
+function initModalTouchEvents() {
+    if (!window.modalCarousel) return;
+    
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    let isDragging = false;
+    
+    function handleModalTouchStart(e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        isDragging = true;
+    }
+    
+    function handleModalTouchMove(e) {
+        if (!isDragging) return;
+        
+        e.preventDefault();
+        touchEndX = e.touches[0].clientX;
+        touchEndY = e.touches[0].clientY;
+        
+        const diffX = touchStartX - touchEndX;
+        const translateX = -window.modalCurrentSlide * 100 - (diffX / window.modalCarousel.offsetWidth) * 100;
+        window.modalCarousel.style.transform = `translateX(${translateX}%)`;
+    }
+    
+    function handleModalTouchEnd(e) {
+        if (!isDragging) return;
+        
+        isDragging = false;
+        const diffX = touchStartX - touchEndX;
+        const diffY = touchStartY - touchEndY;
+        const threshold = 50;
+        
+        // Check for swipe down (close modal)
+        if (diffY > threshold && Math.abs(diffY) > Math.abs(diffX)) {
+            closeModalCarousel();
+            return;
+        }
+        
+        if (Math.abs(diffX) > threshold) {
+            if (diffX > 0) {
+                nextModalSlide();
+            } else {
+                prevModalSlide();
+            }
+        } else {
+            updateModalCarousel();
+        }
+    }
+    
+    window.modalCarousel.addEventListener('touchstart', handleModalTouchStart, { passive: false });
+    window.modalCarousel.addEventListener('touchmove', handleModalTouchMove, { passive: false });
+    window.modalCarousel.addEventListener('touchend', handleModalTouchEnd, { passive: false });
+}
+
+// Close button event listener
+document.getElementById('modalCloseBtn').addEventListener('click', closeModalCarousel);
+
+function closeModalCarousel() {
+    const modal = document.getElementById('modalCarousel');
+    modal.classList.remove('active');
+    document.body.style.overflow = ''; // Restore scrolling
+    window.modalCarousel = null;
+}
+
+// Make close function globally available
+window.closeModalCarousel = closeModalCarousel;
+</script>
 {% endblock %} 

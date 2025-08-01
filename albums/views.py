@@ -1,11 +1,18 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.urls import reverse
 from .models import ClientAlbum
 from core.services import GoogleDriveService
 import zipfile
 import io
+
+
+def is_admin_user(user):
+    """Check if user is admin/staff"""
+    return user.is_authenticated and user.is_staff
 
 
 @cache_page(60 * 15)  # Cache for 15 minutes
@@ -82,7 +89,34 @@ def download_album_zip(request, album_id):
 
 
 @login_required
+@user_passes_test(is_admin_user)
 def admin_album_list(request):
-    """Admin view to list all albums"""
-    albums = ClientAlbum.objects.all()
-    return render(request, 'albums/admin_list.html', {'albums': albums})
+    """Admin view to list all albums with link generation"""
+    albums = ClientAlbum.objects.all().order_by('-date')
+    
+    # Generate full URLs for each album
+    for album in albums:
+        album.full_url = request.build_absolute_uri(reverse('albums:album_detail', kwargs={'album_id': album.id}))
+    
+    context = {
+        'albums': albums,
+        'site_domain': request.get_host(),
+    }
+    return render(request, 'albums/admin_list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def generate_album_link(request, album_id):
+    """Generate and display album link for sharing"""
+    album = get_object_or_404(ClientAlbum, id=album_id)
+    
+    # Generate the full URL
+    album_url = request.build_absolute_uri(reverse('albums:album_detail', kwargs={'album_id': album.id}))
+    
+    context = {
+        'album': album,
+        'album_url': album_url,
+        'site_domain': request.get_host(),
+    }
+    return render(request, 'albums/generate_link.html', context)

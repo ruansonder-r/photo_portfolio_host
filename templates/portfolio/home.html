@@ -44,7 +44,7 @@
         {% for image in carousel_images %}
         <div class="carousel-slide">
             <div class="carousel-card">
-                <img src="{{ image.download_url }}" alt="{{ image.name }}" loading="lazy" class="w-full h-full object-cover">
+                <img src="{{ image.download_url }}" alt="{{ image.name }}" loading="lazy">
                 <!-- Carousel caption removed -->
             </div>
         </div>
@@ -55,6 +55,10 @@
     <button class="carousel-nav carousel-prev" aria-label="Previous slide">•</button>
     <button class="carousel-nav carousel-next" aria-label="Next slide">•</button>
     {% endif %}
+</div>
+{% else %}
+<div style="background: red; color: white; padding: 10px; margin: 10px;">
+    <strong>Debug:</strong> No carousel images found!
 </div>
 {% endif %}
 
