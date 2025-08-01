@@ -35,8 +35,7 @@ Since Vercel's framework auto-detection isn't working, we'll manually configure 
   },
   "functions": {
     "photo_portfolio/wsgi.py": {
-      "runtime": "python3.9",
-      "maxDuration": 30
+      "runtime": "python3.10"
     }
   },
   "buildCommand": "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput",
