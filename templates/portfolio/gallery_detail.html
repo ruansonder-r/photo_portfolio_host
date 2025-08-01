@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ gallery_name }} - Portfolio{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-4xl font-bold text-gray-800">{{ gallery_name }}</h1>
+        <a href="{% url 'portfolio:home' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            ← Back to Portfolio
+        </a>
+    </div>
+</div>
+
+{% if error %}
+<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+    <strong>Error:</strong> {{ error }}
+</div>
+{% endif %}
+
+{% if images %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {% for image in images %}
+    <div class="group">
+        <div class="relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <img src="{{ image.download_url }}" alt="{{ image.name }}" loading="lazy" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <h3 class="text-white font-semibold text-sm">{{ image.name }}</h3>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-16">
+    <h2 class="text-2xl font-semibold text-gray-600 mb-4">No images in this gallery</h2>
+    <p class="text-gray-500">This gallery is empty or unavailable.</p>
+</div>
+{% endif %}
+{% endblock %} 

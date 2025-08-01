@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ album.title }} - Client Album{% endblock %}
+
+{% block content %}
+<div class="text-center mb-12">
+    <h1 class="text-4xl font-bold text-gray-800 mb-2">{{ album.title }}</h1>
+    <p class="text-xl text-gray-600 mb-4">{{ album.date|date:"F j, Y" }}</p>
+    {% if album.description %}
+    <p class="text-lg text-gray-700 max-w-3xl mx-auto leading-relaxed">{{ album.description }}</p>
+    {% endif %}
+</div>
+
+{% if error %}
+<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+    <strong>Error:</strong> {{ error }}
+</div>
+{% endif %}
+
+{% if images %}
+<div class="flex justify-center mb-8">
+    <a href="{% url 'albums:download_album_zip' album_id=album.id %}" 
+       class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl">
+        📦 Download All Photos (ZIP)
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {% for image in images %}
+    <div class="group">
+        <div class="relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <img src="{{ image.download_url }}" alt="{{ image.name }}" loading="lazy" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <h3 class="text-white font-semibold text-sm mb-2">{{ image.name }}</h3>
+                <a href="{% url 'albums:download_image' album_id=album.id image_id=image.id %}"
+                   class="inline-flex items-center px-3 py-1 bg-white/20 text-white text-xs font-medium rounded hover:bg-white/30 transition-colors backdrop-blur-sm">
+                    📥 Download
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-16">
+    <h2 class="text-2xl font-semibold text-gray-600 mb-4">No images in this album</h2>
+    <p class="text-gray-500">This album is empty or unavailable.</p>
+</div>
+{% endif %}
+{% endblock %} 

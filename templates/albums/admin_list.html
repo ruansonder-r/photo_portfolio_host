@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Album Management - Admin{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-4xl font-bold text-gray-800 mb-2">Album Management</h1>
+    <p class="text-xl text-gray-600">Manage client albums and their Google Drive integration</p>
+</div>
+
+<div class="mb-8">
+    <a href="{% url 'admin:albums_clientalbum_add' %}" 
+       class="inline-flex items-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl">
+        ➕ Create New Album
+    </a>
+</div>
+
+{% if albums %}
+<div class="overflow-x-auto">
+    <table class="w-full border-collapse bg-white rounded-lg shadow-lg overflow-hidden">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Title</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Date</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Folder Name</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Album URL</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for album in albums %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4 text-sm text-gray-900">{{ album.title }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">{{ album.date|date:"M j, Y" }}</td>
+                <td class="px-6 py-4 text-sm font-mono text-gray-700">{{ album.folder_name }}</td>
+                <td class="px-6 py-4 text-sm">
+                    <a href="{% url 'albums:album_detail' album_id=album.id %}" 
+                       target="_blank"
+                       class="text-blue-600 hover:text-blue-800 underline">
+                        View Album
+                    </a>
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    <a href="{% url 'admin:albums_clientalbum_change' album.id %}" 
+                       class="inline-flex items-center px-3 py-1 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors">
+                        ✏️ Edit
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-16">
+    <h2 class="text-2xl font-semibold text-gray-600 mb-4">No albums created yet</h2>
+    <p class="text-gray-500">Create your first client album to get started.</p>
+</div>
+{% endif %}
+{% endblock %} 

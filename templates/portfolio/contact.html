@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Contact - {{ PHOTOGRAPHER_NAME }}{% endblock %}
+
+{% block content %}
+<div class="text-center py-8">
+    <h1 class="text-4xl font-bold text-gray-800 mb-4">Contact</h1>
+    <p class="text-xl text-gray-600 mb-8">Get in touch to discuss your photography needs</p>
+</div>
+
+<div class="max-w-2xl mx-auto text-center py-16">
+    <h2 class="text-3xl font-bold text-gray-800 mb-8">Ready to work together?</h2>
+    <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+        I'm available for portrait sessions, events, commercial work, and more.
+        Let's discuss your project and create something amazing together.
+    </p>
+    
+    <a href="mailto:{{ PHOTOGRAPHER_EMAIL }}?subject=Photography%20Inquiry&body=Hi,%20I'm%20interested%20in%20your%20photography%20services.%20Please%20let%20me%20know%20more%20about%20your%20rates%20and%20availability."
+       class="inline-flex items-center px-8 py-4 bg-gray-800 text-white text-lg font-semibold rounded-lg hover:bg-gray-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
+        📧 Send Email
+    </a>
+    
+    <div class="mt-12 space-y-4 text-gray-600">
+        <div class="flex items-center justify-center space-x-2">
+            <span class="font-semibold">Email:</span>
+            <span>{{ PHOTOGRAPHER_EMAIL }}</span>
+        </div>
+        <div class="flex items-center justify-center space-x-2">
+            <span class="font-semibold">Location:</span>
+            <span>{{ PHOTOGRAPHER_LOCATION }}</span>
+        </div>
+        <div class="flex items-center justify-center space-x-2">
+            <span class="font-semibold">Response Time:</span>
+            <span>Within 24 hours</span>
+        </div>
+    </div>
+</div>
+{% endblock %} 

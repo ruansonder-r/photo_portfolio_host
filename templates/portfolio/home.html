@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Portfolio - {{ PHOTOGRAPHER_NAME }}{% endblock %}
+
+{% block content %}
+
+{% if debug %}
+<div class="bg-gray-100 p-4 my-4 rounded-lg font-mono text-sm">
+    <h3 class="text-lg font-semibold mb-2">🔍 Debug Information</h3>
+    <p><strong>Carousel images:</strong> {{ carousel_images|length }}</p>
+    <p><strong>Number of galleries:</strong> {{ galleries|length }}</p>
+    {% if carousel_images %}
+        <p><strong>Carousel images:</strong></p>
+        {% for image in carousel_images %}
+        <p class="my-1 text-xs">🖼️ {{ image.name }} - {{ image.download_url }}</p>
+        {% endfor %}
+    {% endif %}
+    {% if galleries %}
+        <p><strong>Gallery names:</strong> {{ galleries.keys|join:", " }}</p>
+        {% for gallery_name, images in galleries.items %}
+        <div class="my-4 p-2 bg-white rounded border">
+            <p><strong>{{ gallery_name }}:</strong> {{ images|length }} images</p>
+            {% for image in images %}
+            <p class="my-1 text-xs">🖼️ {{ image.name }} - {{ image.download_url }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <p><strong>No galleries found!</strong></p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if error %}
+<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+    <strong>Error:</strong> {{ error }}
+</div>
+{% endif %}
+
+<!-- Floating Carousel Section -->
+{% if carousel_images %}
+<div class="carousel-container">
+    <div class="carousel">
+        {% for image in carousel_images %}
+        <div class="carousel-slide">
+            <div class="carousel-card">
+                <img src="{{ image.download_url }}" alt="{{ image.name }}" loading="lazy" class="w-full h-full object-cover">
+                <!-- Carousel caption removed -->
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if carousel_images|length > 1 %}
+    <button class="carousel-nav carousel-prev" aria-label="Previous slide">•</button>
+    <button class="carousel-nav carousel-next" aria-label="Next slide">•</button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Album Links Section -->
+{% if galleries %}
+<div class="my-12">
+    <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">Featured Albums</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for gallery_name, images in galleries.items %}
+        <div class="group">
+            <a href="{% url 'portfolio:gallery_detail' gallery_name=gallery_name|urlencode %}" class="block">
+                <div class="relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                    {% if images %}
+                    <img src="{{ images.0.download_url }}" alt="{{ gallery_name }}" loading="lazy" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">
+                    {% else %}
+                    <div class="w-full h-64 bg-gray-200 flex items-center justify-center">
+                        <span class="text-gray-500">No images</span>
+                    </div>
+                    {% endif %}
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                        <h3 class="text-white font-semibold text-lg">{{ gallery_name }}</h3>
+                        <p class="text-white/80 text-sm">{{ images|length }} photos</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="text-center py-16">
+    <h2 class="text-2xl font-semibold text-gray-600 mb-4">No albums available</h2>
+    <p class="text-gray-500 mb-4">Check back soon for new content!</p>
+    {% if not debug %}
+    <a href="{% url 'portfolio:home_debug' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+        🔍 Debug Mode
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %} 
