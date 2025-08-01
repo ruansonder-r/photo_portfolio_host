@@ -1,10 +1,16 @@
 #!/bin/bash
-# Build script for Vercel deployment
+# Manual build script for Vercel Django deployment
 
-echo "🚀 Starting Django build for Vercel..."
+set -e  # Exit on any error
+
+echo "🚀 Starting manual Django build for Vercel..."
+
+# Set environment variables
+export DJANGO_SETTINGS_MODULE=photo_portfolio.settings
+export PYTHONPATH=/var/task
 
 # Install dependencies
-echo "📦 Installing dependencies..."
+echo "📦 Installing Python dependencies..."
 pip install -r requirements.txt
 
 # Copy Google Drive credentials if they exist
@@ -14,10 +20,6 @@ if [ -f ".creds/photoportfolioruansonder-08e05af6152b.json" ]; then
     export GOOGLE_DRIVE_CREDENTIALS_FILE=/tmp/credentials.json
 fi
 
-# Set environment variables for Vercel
-export DJANGO_SETTINGS_MODULE=photo_portfolio.settings
-export PYTHONPATH=/var/task
-
 # Collect static files
 echo "📁 Collecting static files..."
 python manage.py collectstatic --noinput --clear
@@ -26,4 +28,13 @@ python manage.py collectstatic --noinput --clear
 echo "🗄️ Running database migrations..."
 python manage.py migrate --noinput
 
-echo "✅ Build completed successfully!" 
+# Verify Django setup
+echo "🔍 Verifying Django configuration..."
+python manage.py check --deploy
+
+echo "✅ Manual build completed successfully!"
+echo "📊 Build Summary:"
+echo "   - Dependencies installed"
+echo "   - Static files collected"
+echo "   - Database migrations applied"
+echo "   - Django configuration verified" 
