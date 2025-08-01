@@ -154,3 +154,26 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Google Drive API settings
 GOOGLE_DRIVE_CREDENTIALS_FILE = os.environ.get('GOOGLE_DRIVE_CREDENTIALS_FILE', '')
 GOOGLE_DRIVE_TOKEN_FILE = os.environ.get('GOOGLE_DRIVE_TOKEN_FILE', 'token.json')
+
+# For Vercel deployment - create credentials file from environment variable
+GOOGLE_DRIVE_CREDENTIALS = os.environ.get('GOOGLE_DRIVE_CREDENTIALS', '')
+
+# Create credentials file for Vercel if credentials are provided as environment variable
+if GOOGLE_DRIVE_CREDENTIALS and not GOOGLE_DRIVE_CREDENTIALS_FILE:
+    import tempfile
+    import json
+    
+    try:
+        # Parse the JSON credentials
+        creds_data = json.loads(GOOGLE_DRIVE_CREDENTIALS)
+        
+        # Create a temporary file for the credentials
+        temp_creds_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(creds_data, temp_creds_file)
+        temp_creds_file.close()
+        
+        # Set the credentials file path
+        GOOGLE_DRIVE_CREDENTIALS_FILE = temp_creds_file.name
+    except (json.JSONDecodeError, Exception) as e:
+        print(f"Error parsing Google Drive credentials: {e}")
+        GOOGLE_DRIVE_CREDENTIALS_FILE = ''
