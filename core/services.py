@@ -8,6 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from django.conf import settings
+from albums.models import Image
 
 
 class GoogleDriveService:
@@ -66,57 +67,47 @@ class GoogleDriveService:
             return None
     
     def get_public_carousel_images(self) -> List[Dict]:
-        """Get images from the 'public' folder for carousel display"""
-        if not self.service:
-            self.authenticate()
+        """Get images from the 'public' folder for carousel display - use local images"""
+        # Get local images from database
+        local_images = Image.objects.filter(folder_name='public', parent_folder_name='Public_Portfolio')
         
-        # Get Public_Portfolio folder ID
-        portfolio_folder_id = self.get_folder_id('Public_Portfolio')
-        if not portfolio_folder_id:
-            return []
+        image_files = []
+        for image in local_images:
+            if image.local_url and os.path.exists(image.local_file_path):
+                image_files.append({
+                    'id': image.google_drive_id,
+                    'name': image.name,
+                    'mime_type': image.mime_type,
+                    'download_url': image.local_url,
+                    'size': image.size,
+                    'dimensions': image.width
+                })
         
-        # Get 'public' folder ID
-        public_folder_id = self.get_folder_id('public', 'Public_Portfolio')
-        if not public_folder_id:
-            return []
-        
-        try:
-            results = self.service.files().list(
-                q=f"'{public_folder_id}' in parents and trashed=false",
-                spaces='drive',
-                fields='files(id, name, mimeType, webViewLink, thumbnailLink, size, imageMediaMetadata)',
-                orderBy='name'
-            ).execute()
-            
-            files = results.get('files', [])
-            # Filter for image files
-            image_files = []
-            for file in files:
-                if file['mimeType'].startswith('image/'):
-                    # Use the original thumbnailLink which works
-                    image_url = file.get('thumbnailLink', '')
-                    if not image_url:
-                        # Fallback to direct view URL
-                        image_url = f"https://drive.google.com/uc?export=view&id={file['id']}"
-                    
-                    image_files.append({
-                        'id': file['id'],
-                        'name': file['name'],
-                        'mime_type': file['mimeType'],
-                        'web_view_link': file.get('webViewLink', ''),
-                        'thumbnail_link': file.get('thumbnailLink', ''),
-                        'download_url': image_url,
-                        'size': file.get('size', ''),
-                        'dimensions': file.get('imageMediaMetadata', {}).get('width', 0) if file.get('imageMediaMetadata') else 0
-                    })
-            
-            return image_files
-        except HttpError as error:
-            print(f'An error occurred: {error}')
-            return []
+        return image_files
     
     def get_files_in_folder(self, folder_name: str, parent_folder_name: str = None) -> List[Dict]:
-        """Get all files in a folder"""
+        """Get all files in a folder - use local images if available"""
+        # Check if images exist locally
+        local_images = Image.objects.filter(folder_name=folder_name, parent_folder_name=parent_folder_name)
+        
+        if local_images.exists():
+            # Use local images
+            image_files = []
+            for image in local_images:
+                if image.local_url and os.path.exists(image.local_file_path):
+                    image_files.append({
+                        'id': image.google_drive_id,
+                        'name': image.name,
+                        'mime_type': image.mime_type,
+                        'download_url': image.local_url
+                    })
+            return image_files
+        else:
+            # Download images on first access (for private albums)
+            return self._download_folder_images(folder_name, parent_folder_name)
+    
+    def _download_folder_images(self, folder_name: str, parent_folder_name: str = None) -> List[Dict]:
+        """Download images from a folder and store them locally"""
         if not self.service:
             self.authenticate()
         
@@ -125,100 +116,126 @@ class GoogleDriveService:
             return []
         
         try:
+            # Create media directory
+            media_dir = os.path.join(settings.MEDIA_ROOT, 'images')
+            os.makedirs(media_dir, exist_ok=True)
+            
             results = self.service.files().list(
                 q=f"'{folder_id}' in parents and trashed=false",
                 spaces='drive',
-                fields='files(id, name, mimeType, webViewLink, thumbnailLink)',
+                fields='files(id, name, mimeType, size, imageMediaMetadata)',
                 orderBy='name'
             ).execute()
             
             files = results.get('files', [])
-            # Filter for image files
             image_files = []
+            
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use the original thumbnailLink which works
-                    image_url = file.get('thumbnailLink', '')
-                    if not image_url:
-                        # Fallback to direct download URL
-                        image_url = f"https://drive.google.com/uc?export=view&id={file['id']}"
-                    
-                    image_files.append({
-                        'id': file['id'],
-                        'name': file['name'],
-                        'mime_type': file['mimeType'],
-                        'web_view_link': file.get('webViewLink', ''),
-                        'thumbnail_link': file.get('thumbnailLink', ''),
-                        'download_url': image_url
-                    })
+                    # Download and store the image
+                    success = self._download_and_store_image(file, media_dir, folder_name, parent_folder_name)
+                    if success:
+                        # Get the stored image
+                        stored_image = Image.objects.get(google_drive_id=file['id'])
+                        image_files.append({
+                            'id': stored_image.google_drive_id,
+                            'name': stored_image.name,
+                            'mime_type': stored_image.mime_type,
+                            'download_url': stored_image.local_url
+                        })
             
             return image_files
+            
         except HttpError as error:
             print(f'An error occurred: {error}')
             return []
     
+    def _download_and_store_image(self, file_data, media_dir, folder_name, parent_folder_name=None):
+        """Download a single image and store it locally"""
+        try:
+            # Generate local file path
+            file_extension = os.path.splitext(file_data['name'])[1]
+            local_filename = f"{file_data['id']}{file_extension}"
+            local_path = os.path.join(media_dir, local_filename)
+            
+            # Download file from Google Drive
+            request = self.service.files().get_media(fileId=file_data['id'])
+            with open(local_path, 'wb') as f:
+                f.write(request.execute())
+            
+            # Get image dimensions
+            width = 0
+            height = 0
+            if file_data.get('imageMediaMetadata'):
+                metadata = file_data['imageMediaMetadata']
+                width = metadata.get('width', 0)
+                height = metadata.get('height', 0)
+            
+            # Create or update Image record
+            image, created = Image.objects.update_or_create(
+                google_drive_id=file_data['id'],
+                defaults={
+                    'name': file_data['name'],
+                    'mime_type': file_data['mimeType'],
+                    'local_file_path': local_path,
+                    'folder_name': folder_name,
+                    'parent_folder_name': parent_folder_name,
+                    'size': int(file_data.get('size', 0)),
+                    'width': width,
+                    'height': height,
+                }
+            )
+            
+            print(f'Downloaded image: {file_data["name"]}')
+            return True
+            
+        except Exception as e:
+            print(f'Error downloading {file_data["name"]}: {e}')
+            return False
+    
     def get_public_portfolio_galleries(self) -> Dict[str, List[Dict]]:
-        """Get all galleries from Public_Portfolio folder"""
+        """Get all galleries from Public_Portfolio folder - use local images"""
         galleries = {}
         
-        # Get Public_Portfolio folder ID
-        portfolio_folder_id = self.get_folder_id('Public_Portfolio')
-        if not portfolio_folder_id:
-            return galleries
+        # Get all unique gallery names from local database
+        gallery_names = Image.objects.filter(
+            parent_folder_name='Public_Portfolio'
+        ).exclude(
+            folder_name='public'
+        ).values_list('folder_name', flat=True).distinct()
         
-        try:
-            # Get all subfolders in Public_Portfolio (excluding 'public' folder)
-            results = self.service.files().list(
-                q=f"'{portfolio_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and name!='public' and trashed=false",
-                spaces='drive',
-                fields='files(id, name)',
-                orderBy='name'
-            ).execute()
+        for gallery_name in gallery_names:
+            local_images = Image.objects.filter(folder_name=gallery_name, parent_folder_name='Public_Portfolio')
+            gallery_files = []
             
-            subfolders = results.get('files', [])
-            
-            for subfolder in subfolders:
-                gallery_name = subfolder['name']
-                gallery_files = self.get_files_in_folder_by_id(subfolder['id'])
-                if gallery_files:
-                    galleries[gallery_name] = gallery_files
-            
-            return galleries
-        except HttpError as error:
-            print(f'An error occurred: {error}')
-            return galleries
-    
-    def get_files_in_folder_by_id(self, folder_id: str) -> List[Dict]:
-        """Get all files in a folder by ID"""
-        try:
-            results = self.service.files().list(
-                q=f"'{folder_id}' in parents and trashed=false",
-                spaces='drive',
-                fields='files(id, name, mimeType, webViewLink, thumbnailLink)',
-                orderBy='name'
-            ).execute()
-            
-            files = results.get('files', [])
-            # Filter for image files
-            image_files = []
-            for file in files:
-                if file['mimeType'].startswith('image/'):
-                    # Use the original thumbnailLink which works
-                    image_url = file.get('thumbnailLink', '')
-                    if not image_url:
-                        # Fallback to direct download URL
-                        image_url = f"https://drive.google.com/uc?export=view&id={file['id']}"
-                    
-                    image_files.append({
-                        'id': file['id'],
-                        'name': file['name'],
-                        'mime_type': file['mimeType'],
-                        'web_view_link': file.get('webViewLink', ''),
-                        'thumbnail_link': file.get('thumbnailLink', ''),
-                        'download_url': image_url
+            for image in local_images:
+                if image.local_url and os.path.exists(image.local_file_path):
+                    gallery_files.append({
+                        'id': image.google_drive_id,
+                        'name': image.name,
+                        'mime_type': image.mime_type,
+                        'download_url': image.local_url
                     })
             
-            return image_files
+            if gallery_files:
+                galleries[gallery_name] = gallery_files
+        
+        return galleries
+    
+    def get_files_in_folder_by_id(self, folder_id: str) -> List[Dict]:
+        """Get all files in a folder by ID - use local images if available"""
+        # This method is used for public galleries, so we'll use the folder-based approach
+        # We need to get the folder name first
+        if not self.service:
+            self.authenticate()
+        
+        try:
+            folder_info = self.service.files().get(fileId=folder_id).execute()
+            folder_name = folder_info['name']
+            
+            # Use the folder-based method
+            return self.get_files_in_folder(folder_name, 'Public_Portfolio')
+            
         except HttpError as error:
             print(f'An error occurred: {error}')
             return []

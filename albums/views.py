@@ -4,10 +4,12 @@ from django.views.decorators.cache import cache_page
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.urls import reverse
-from .models import ClientAlbum
+from django.conf import settings
+from .models import ClientAlbum, Image
 from core.services import GoogleDriveService
 import zipfile
 import io
+import os
 
 
 def is_admin_user(user):
@@ -22,7 +24,7 @@ def album_detail(request, album_id):
     
     try:
         drive_service = GoogleDriveService()
-        images = drive_service.get_private_album_files(album.folder_name)
+        images = drive_service.get_private_album_files(album.folder_name)  # Use folder_name for Google Drive mapping
         
         context = {
             'album': album,
@@ -43,20 +45,31 @@ def download_image(request, album_id, image_id):
     album = get_object_or_404(ClientAlbum, id=album_id)
     
     try:
-        drive_service = GoogleDriveService()
-        images = drive_service.get_private_album_files(album.folder_name)
+        # Try to get the image from local storage first
+        image = Image.objects.filter(google_drive_id=image_id).first()
         
-        # Find the specific image
-        image = next((img for img in images if img['id'] == image_id), None)
-        
-        if image:
-            # Redirect to Google Drive download URL
-            return HttpResponse(
-                f'<script>window.location.href="{image["download_url"]}";</script>',
-                content_type='text/html'
-            )
+        if image and os.path.exists(image.local_file_path):
+            # Serve local file
+            with open(image.local_file_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type=image.mime_type)
+                response['Content-Disposition'] = f'attachment; filename="{image.name}"'
+                return response
         else:
-            return HttpResponse("Image not found", status=404)
+            # Fallback to Google Drive service
+            drive_service = GoogleDriveService()
+            images = drive_service.get_private_album_files(album.folder_name)  # Use folder_name for Google Drive mapping
+            
+            # Find the specific image
+            image_data = next((img for img in images if img['id'] == image_id), None)
+            
+            if image_data:
+                # Redirect to local URL if available, otherwise Google Drive
+                return HttpResponse(
+                    f'<script>window.location.href="{image_data["download_url"]}";</script>',
+                    content_type='text/html'
+                )
+            else:
+                return HttpResponse("Image not found", status=404)
     except Exception as e:
         return HttpResponse(f"Error downloading image: {str(e)}", status=500)
 
@@ -67,7 +80,7 @@ def download_album_zip(request, album_id):
     
     try:
         drive_service = GoogleDriveService()
-        images = drive_service.get_private_album_files(album.folder_name)
+        images = drive_service.get_private_album_files(album.folder_name)  # Use folder_name for Google Drive mapping
         
         if not images:
             return HttpResponse("No images found in album", status=404)
@@ -75,13 +88,21 @@ def download_album_zip(request, album_id):
         # Create ZIP file in memory
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for image in images:
-                # Add image to ZIP with original filename
-                zip_file.writestr(image['name'], '')  # Placeholder - in real implementation, you'd download the actual file
+            for image_data in images:
+                # Try to get local file first
+                image = Image.objects.filter(google_drive_id=image_data['id']).first()
+                
+                if image and os.path.exists(image.local_file_path):
+                    # Add local file to ZIP
+                    with open(image.local_file_path, 'rb') as f:
+                        zip_file.writestr(image.name, f.read())
+                else:
+                    # Fallback: add placeholder (could implement Google Drive download here)
+                    zip_file.writestr(image_data['name'], '')
         
         # Prepare response
         response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="{album.title}.zip"'
+        response['Content-Disposition'] = f'attachment; filename="{album.name}.zip"'  # Use name for filename
         return response
         
     except Exception as e:
