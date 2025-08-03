@@ -24,22 +24,32 @@ class GoogleDriveService:
     def authenticate(self):
         """Authenticate with Google Drive API using service account"""
         try:
+            print("Starting Google Drive authentication...")
+            
             # Check if credentials file exists
             if not self.credentials_file or not os.path.exists(self.credentials_file):
+                print(f"ERROR: Google Drive credentials file not found: {self.credentials_file}")
+                print(f"Available environment variables: {[k for k in os.environ.keys() if 'GOOGLE' in k]}")
                 raise FileNotFoundError(
                     f"Google Drive credentials file not found: {self.credentials_file}"
                 )
+            
+            print(f"Using credentials file: {self.credentials_file}")
             
             # Use service account credentials
             creds = service_account.Credentials.from_service_account_file(
                 self.credentials_file, scopes=self.SCOPES
             )
             
+            print("Building Google Drive service...")
             self.service = build('drive', 'v3', credentials=creds)
+            print("Google Drive authentication successful")
             return self.service
             
         except Exception as e:
-            print(f"Authentication error: {e}")
+            print(f"ERROR in Google Drive authentication: {e}")
+            import traceback
+            traceback.print_exc()
             raise
     
     def get_folder_id(self, folder_name: str, parent_folder_name: str = None) -> Optional[str]:
@@ -68,7 +78,24 @@ class GoogleDriveService:
     
     def _is_production(self):
         """Check if we're in production (Vercel) environment"""
-        return not settings.DEBUG or 'VERCEL' in os.environ
+        # Check for Vercel-specific environment variables
+        vercel_env = os.environ.get('VERCEL', '')
+        vercel_url = os.environ.get('VERCEL_URL', '')
+        vercel_environment = os.environ.get('VERCEL_ENV', '')
+        
+        # Also check if DEBUG is explicitly False
+        debug_setting = getattr(settings, 'DEBUG', True)
+        
+        is_prod = (
+            vercel_env == '1' or 
+            vercel_url or 
+            vercel_environment in ['production', 'preview'] or
+            not debug_setting
+        )
+        
+        print(f"Production detection: VERCEL={vercel_env}, VERCEL_URL={vercel_url}, VERCEL_ENV={vercel_environment}, DEBUG={debug_setting}, Is Production={is_prod}")
+        
+        return is_prod
     
     def get_public_carousel_images(self) -> List[Dict]:
         """Get images from the 'public' folder for carousel display"""
@@ -99,20 +126,25 @@ class GoogleDriveService:
     
     def _get_public_carousel_images_from_drive(self) -> List[Dict]:
         """Get images directly from Google Drive"""
-        if not self.service:
-            self.authenticate()
-        
-        # Get Public_Portfolio folder ID
-        portfolio_folder_id = self.get_folder_id('Public_Portfolio')
-        if not portfolio_folder_id:
-            return []
-        
-        # Get 'public' folder ID
-        public_folder_id = self.get_folder_id('public', 'Public_Portfolio')
-        if not public_folder_id:
-            return []
-        
         try:
+            if not self.service:
+                print("Authenticating with Google Drive...")
+                self.authenticate()
+            
+            # Get Public_Portfolio folder ID
+            portfolio_folder_id = self.get_folder_id('Public_Portfolio')
+            if not portfolio_folder_id:
+                print("ERROR: Public_Portfolio folder not found")
+                return []
+            
+            # Get 'public' folder ID
+            public_folder_id = self.get_folder_id('public', 'Public_Portfolio')
+            if not public_folder_id:
+                print("ERROR: public folder not found")
+                return []
+            
+            print(f"Found folders: Public_Portfolio={portfolio_folder_id}, public={public_folder_id}")
+            
             results = self.service.files().list(
                 q=f"'{public_folder_id}' in parents and trashed=false",
                 spaces='drive',
@@ -121,11 +153,21 @@ class GoogleDriveService:
             ).execute()
             
             files = results.get('files', [])
+            print(f"Found {len(files)} files in public folder")
+            
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use Google Drive view URL for production
-                    image_url = f"https://drive.google.com/uc?id={file['id']}&export=view"
+                    # Use thumbnailLink for direct image access
+                    image_url = file.get('thumbnailLink', '')
+                    if not image_url:
+                        # Fallback to webContentLink
+                        image_url = file.get('webContentLink', '')
+                    if not image_url:
+                        # Final fallback to webViewLink
+                        image_url = file.get('webViewLink', '')
+                    
+                    print(f"Image {file['name']}: {image_url}")
                     
                     image_files.append({
                         'id': file['id'],
@@ -136,9 +178,12 @@ class GoogleDriveService:
                         'dimensions': file.get('imageMediaMetadata', {}).get('width', 0) if file.get('imageMediaMetadata') else 0
                     })
             
+            print(f"Returning {len(image_files)} image files")
             return image_files
-        except HttpError as error:
-            print(f'An error occurred: {error}')
+        except Exception as e:
+            print(f'ERROR in _get_public_carousel_images_from_drive: {e}')
+            import traceback
+            traceback.print_exc()
             return []
     
     def get_files_in_folder(self, folder_name: str, parent_folder_name: str = None) -> List[Dict]:
@@ -191,8 +236,14 @@ class GoogleDriveService:
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use Google Drive view URL for production
-                    image_url = f"https://drive.google.com/uc?id={file['id']}&export=view"
+                    # Use thumbnailLink for direct image access
+                    image_url = file.get('thumbnailLink', '')
+                    if not image_url:
+                        # Fallback to webContentLink
+                        image_url = file.get('webContentLink', '')
+                    if not image_url:
+                        # Final fallback to webViewLink
+                        image_url = file.get('webViewLink', '')
                     
                     image_files.append({
                         'id': file['id'],
@@ -397,8 +448,14 @@ class GoogleDriveService:
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use Google Drive view URL for production
-                    image_url = f"https://drive.google.com/uc?id={file['id']}&export=view"
+                    # Use thumbnailLink for direct image access
+                    image_url = file.get('thumbnailLink', '')
+                    if not image_url:
+                        # Fallback to webContentLink
+                        image_url = file.get('webContentLink', '')
+                    if not image_url:
+                        # Final fallback to webViewLink
+                        image_url = file.get('webViewLink', '')
                     
                     image_files.append({
                         'id': file['id'],
