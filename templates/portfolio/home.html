@@ -69,7 +69,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for gallery_name, images in galleries.items %}
         <div class="group">
-            <a href="{% url 'portfolio:gallery_detail' gallery_name=gallery_name|urlencode %}" class="block">
+            <a href="{% url 'portfolio:gallery_detail' gallery_name=gallery_name %}" class="block">
                 <div class="relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                     {% if images %}
                     <img src="{{ images.0.download_url }}" alt="{{ gallery_name }}" loading="lazy" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105">

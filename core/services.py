@@ -97,6 +97,38 @@ class GoogleDriveService:
         
         return is_prod
     
+    def _get_high_quality_image_url(self, file_id: str) -> str:
+        """Get high-quality image URL from Google Drive"""
+        try:
+            # Try to get the original image URL
+            original_url = f"https://drive.google.com/uc?id={file_id}&export=download"
+            
+            # Test if the URL is accessible
+            import requests
+            response = requests.head(original_url, timeout=5)
+            if response.status_code == 200:
+                return original_url
+            
+            # Fallback to webContentLink if available
+            if not self.service:
+                self.authenticate()
+            
+            file_info = self.service.files().get(fileId=file_id, fields='webContentLink').execute()
+            if file_info.get('webContentLink'):
+                return file_info['webContentLink']
+            
+            # Final fallback to thumbnailLink but with larger size
+            file_info = self.service.files().get(fileId=file_id, fields='thumbnailLink').execute()
+            if file_info.get('thumbnailLink'):
+                # Replace s220 with s1200 for higher quality
+                return file_info['thumbnailLink'].replace('=s220', '=s1200')
+            
+            return original_url
+            
+        except Exception as e:
+            print(f"Error getting high-quality URL for {file_id}: {e}")
+            return f"https://drive.google.com/uc?id={file_id}&export=download"
+    
     def get_public_carousel_images(self) -> List[Dict]:
         """Get images from the 'public' folder for carousel display"""
         if self._is_production():
@@ -158,14 +190,8 @@ class GoogleDriveService:
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use thumbnailLink for direct image access
-                    image_url = file.get('thumbnailLink', '')
-                    if not image_url:
-                        # Fallback to webContentLink
-                        image_url = file.get('webContentLink', '')
-                    if not image_url:
-                        # Final fallback to webViewLink
-                        image_url = file.get('webViewLink', '')
+                    # Use high-quality image URL instead of thumbnail
+                    image_url = self._get_high_quality_image_url(file['id'])
                     
                     print(f"Image {file['name']}: {image_url}")
                     
@@ -236,14 +262,8 @@ class GoogleDriveService:
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use thumbnailLink for direct image access
-                    image_url = file.get('thumbnailLink', '')
-                    if not image_url:
-                        # Fallback to webContentLink
-                        image_url = file.get('webContentLink', '')
-                    if not image_url:
-                        # Final fallback to webViewLink
-                        image_url = file.get('webViewLink', '')
+                    # Use high-quality image URL instead of thumbnail
+                    image_url = self._get_high_quality_image_url(file['id'])
                     
                     image_files.append({
                         'id': file['id'],
@@ -448,14 +468,8 @@ class GoogleDriveService:
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use thumbnailLink for direct image access
-                    image_url = file.get('thumbnailLink', '')
-                    if not image_url:
-                        # Fallback to webContentLink
-                        image_url = file.get('webContentLink', '')
-                    if not image_url:
-                        # Final fallback to webViewLink
-                        image_url = file.get('webViewLink', '')
+                    # Use high-quality image URL instead of thumbnail
+                    image_url = self._get_high_quality_image_url(file['id'])
                     
                     image_files.append({
                         'id': file['id'],

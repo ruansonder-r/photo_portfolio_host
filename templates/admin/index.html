@@ -1,0 +1,28 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="quick-actions">
+    <a href="{% url 'albums:admin_list' %}" class="quick-action-card">
+        <h3>📁 Manage Albums</h3>
+        <p>Create and manage private client albums, generate sharing links, and track album access.</p>
+    </a>
+    
+    <a href="{% url 'admin:albums_clientalbum_changelist' %}" class="quick-action-card">
+        <h3>👥 Client Albums</h3>
+        <p>View all client albums, edit details, and manage album settings.</p>
+    </a>
+    
+    <a href="{% url 'admin:albums_image_changelist' %}" class="quick-action-card">
+        <h3>🖼️ Images</h3>
+        <p>Browse and manage all images in your portfolio, including metadata and organization.</p>
+    </a>
+    
+    <a href="{% url 'admin:auth_user_changelist' %}" class="quick-action-card">
+        <h3>👤 Users</h3>
+        <p>Manage user accounts, permissions, and admin access for your portfolio.</p>
+    </a>
+</div>
+
+{{ block.super }}
+{% endblock %} 
