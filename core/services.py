@@ -1,6 +1,8 @@
 import os
 import json
 from typing import List, Dict, Optional
+from datetime import timedelta
+from urllib.parse import quote
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
@@ -9,6 +11,13 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from django.conf import settings
 from albums.models import Image
+from django.utils.functional import cached_property
+
+try:
+    # Optional: only required when using GCS for URLs
+    from google.cloud import storage  # type: ignore
+except Exception:
+    storage = None
 
 
 class GoogleDriveService:
@@ -96,6 +105,55 @@ class GoogleDriveService:
         print(f"Production detection: VERCEL={vercel_env}, VERCEL_URL={vercel_url}, VERCEL_ENV={vercel_environment}, DEBUG={debug_setting}, Is Production={is_prod}")
         
         return is_prod
+
+    # -------- GCS helpers --------
+    @cached_property
+    def _gcs_enabled_public(self) -> bool:
+        return bool(getattr(settings, 'GCS_PUBLIC_BASE_URL', ''))
+
+    @cached_property
+    def _gcs_enabled_private(self) -> bool:
+        return bool(getattr(settings, 'GCS_PRIVATE_BUCKET', '') and getattr(settings, 'GCP_SERVICE_ACCOUNT_JSON', ''))
+
+    @cached_property
+    def _gcs_client(self):
+        if not self._gcs_enabled_private:
+            return None
+        if storage is None:
+            return None
+        try:
+            return storage.Client.from_service_account_info(json.loads(settings.GCP_SERVICE_ACCOUNT_JSON))
+        except Exception as e:
+            print(f"Failed to init GCS client: {e}")
+            return None
+
+    def _build_gcs_public_url(self, folder_name: str, file_name: str) -> Optional[str]:
+        if not self._gcs_enabled_public:
+            return None
+        base = settings.GCS_PUBLIC_BASE_URL.rstrip('/')
+        prefix = getattr(settings, 'GCS_PUBLIC_PREFIX', 'Public_Portfolio').strip('/')
+        # URL-encode path segments to be safe
+        path = f"{quote(prefix)}/{quote(folder_name)}/{quote(file_name)}"
+        return f"{base}/{path}"
+
+    def _build_gcs_private_signed_url(self, folder_name: str, file_name: str) -> Optional[str]:
+        if not self._gcs_client:
+            return None
+        try:
+            bucket_name = settings.GCS_PRIVATE_BUCKET
+            prefix = getattr(settings, 'GCS_PRIVATE_PREFIX', 'Private_Albums').strip('/')
+            blob_path = f"{prefix}/{folder_name}/{file_name}"
+            bucket = self._gcs_client.bucket(bucket_name)
+            blob = bucket.blob(blob_path)
+            url = blob.generate_signed_url(
+                version='v4',
+                expiration=timedelta(hours=int(getattr(settings, 'GCS_SIGNED_URL_HOURS', 6))),
+                method='GET',
+            )
+            return url
+        except Exception as e:
+            print(f"Failed to sign GCS URL: {e}")
+            return None
     
     def _get_high_quality_image_url(self, file_id: str) -> str:
         """Get high-quality image URL from Google Drive"""
@@ -132,7 +190,7 @@ class GoogleDriveService:
     def get_public_carousel_images(self) -> List[Dict]:
         """Get images from the 'public' folder for carousel display"""
         if self._is_production():
-            # In production, use Google Drive URLs directly
+            # In production, prefer GCS URLs if configured; fallback to Drive
             return self._get_public_carousel_images_from_drive()
         else:
             # In development, use local images
@@ -157,7 +215,7 @@ class GoogleDriveService:
         return image_files
     
     def _get_public_carousel_images_from_drive(self) -> List[Dict]:
-        """Get images directly from Google Drive"""
+        """Get images via Drive listing; prefer GCS URLs when available"""
         try:
             if not self.service:
                 print("Authenticating with Google Drive...")
@@ -190,8 +248,9 @@ class GoogleDriveService:
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use high-quality image URL instead of thumbnail
-                    image_url = self._get_high_quality_image_url(file['id'])
+                    # Prefer GCS public URL if configured; else Drive HQ URL
+                    gcs_url = self._build_gcs_public_url('public', file['name'])
+                    image_url = gcs_url or self._get_high_quality_image_url(file['id'])
                     
                     print(f"Image {file['name']}: {image_url}")
                     
@@ -242,7 +301,7 @@ class GoogleDriveService:
             return self._download_folder_images(folder_name, parent_folder_name)
     
     def _get_files_in_folder_from_drive(self, folder_name: str, parent_folder_name: str = None) -> List[Dict]:
-        """Get images directly from Google Drive"""
+        """Get images via Drive listing; prefer GCS URLs"""
         if not self.service:
             self.authenticate()
         
@@ -262,8 +321,13 @@ class GoogleDriveService:
             image_files = []
             for file in files:
                 if file['mimeType'].startswith('image/'):
-                    # Use high-quality image URL instead of thumbnail
-                    image_url = self._get_high_quality_image_url(file['id'])
+                    # Public portfolio uses public bucket; private albums use signed URLs
+                    if parent_folder_name == 'Public_Portfolio':
+                        gcs_url = self._build_gcs_public_url(folder_name, file['name'])
+                        image_url = gcs_url or self._get_high_quality_image_url(file['id'])
+                    else:
+                        signed = self._build_gcs_private_signed_url(folder_name, file['name'])
+                        image_url = signed or self._get_high_quality_image_url(file['id'])
                     
                     image_files.append({
                         'id': file['id'],

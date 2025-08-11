@@ -32,7 +32,7 @@
         <div class="bg-gray-50 rounded-lg p-4 mb-4">
             <div class="flex items-center space-x-2 mb-2">
                 <label class="text-sm font-medium text-gray-700">Album URL:</label>
-                <button onclick="copyToClipboard('album-url')" 
+                <button data-copy-target="#album-url" 
                         class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
                     📋 Copy URL
                 </button>
@@ -62,7 +62,7 @@ Please let me know if you have any questions or if you'd like to order prints.
 Best regards,
 {{ PHOTOGRAPHER_NAME }}</textarea>
             </div>
-            <button onclick="copyToClipboard('email-template')" 
+            <button data-copy-target="#email-template" 
                     class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
                 📋 Copy Email Template
             </button>
@@ -107,34 +107,5 @@ Best regards,
     </a>
 </div>
 
-<script>
-function copyToClipboard(elementId) {
-    const element = document.getElementById(elementId);
-    element.select();
-    element.setSelectionRange(0, 99999); // For mobile devices
-    
-    try {
-        document.execCommand('copy');
-        
-        // Find the button that was clicked
-        const buttons = document.querySelectorAll('button');
-        const clickedButton = Array.from(buttons).find(btn => btn.onclick && btn.onclick.toString().includes(elementId));
-        
-        if (clickedButton) {
-            const originalText = clickedButton.textContent;
-            clickedButton.textContent = '✅ Copied!';
-            clickedButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-            clickedButton.classList.add('bg-green-600');
-            
-            setTimeout(() => {
-                clickedButton.textContent = originalText;
-                clickedButton.classList.remove('bg-green-600');
-                clickedButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
-            }, 2000);
-        }
-    } catch (err) {
-        console.error('Failed to copy: ', err);
-    }
-}
-</script>
+{% block extra_js %}{% endblock %}
 {% endblock %} 

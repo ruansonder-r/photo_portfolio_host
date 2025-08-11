@@ -44,110 +44,14 @@
 
 <script>
 function openModalFromGallery(startIndex) {
-    const galleryGrid = document.getElementById('galleryGrid');
-    const imageElements = galleryGrid.querySelectorAll('[data-image-index]');
-    
-    // Convert DOM elements to image data
-    const galleryImages = Array.from(imageElements).map(element => ({
-        id: element.dataset.imageIndex,
-        name: element.dataset.imageName,
-        download_url: element.dataset.imageUrl
+    const grid = document.getElementById('galleryGrid');
+    const items = grid.querySelectorAll('[data-image-index]');
+    const images = Array.from(items).map(el => ({
+        id: el.dataset.imageIndex,
+        name: el.dataset.imageName,
+        download_url: el.dataset.imageUrl
     }));
-    
-    // Use the global modal carousel function
-    window.openModalCarousel(galleryImages, startIndex);
+    window.openModalCarousel(images, startIndex);
 }
-
-function updateModalCarousel() {
-    if (window.modalCarousel) {
-        window.modalCarousel.style.transform = `translateX(-${window.modalCurrentSlide * 100}%)`;
-    }
-}
-
-function nextModalSlide() {
-    if (window.modalCarousel) {
-        const slides = window.modalCarousel.querySelectorAll('.carousel-slide');
-        window.modalCurrentSlide = (window.modalCurrentSlide + 1) % slides.length;
-        updateModalCarousel();
-    }
-}
-
-function prevModalSlide() {
-    if (window.modalCarousel) {
-        const slides = window.modalCarousel.querySelectorAll('.carousel-slide');
-        window.modalCurrentSlide = (window.modalCurrentSlide - 1 + slides.length) % slides.length;
-        updateModalCarousel();
-    }
-}
-
-function initModalTouchEvents() {
-    if (!window.modalCarousel) return;
-    
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
-    let isDragging = false;
-    
-    function handleModalTouchStart(e) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        isDragging = true;
-    }
-    
-    function handleModalTouchMove(e) {
-        if (!isDragging) return;
-        
-        e.preventDefault();
-        touchEndX = e.touches[0].clientX;
-        touchEndY = e.touches[0].clientY;
-        
-        const diffX = touchStartX - touchEndX;
-        const translateX = -window.modalCurrentSlide * 100 - (diffX / window.modalCarousel.offsetWidth) * 100;
-        window.modalCarousel.style.transform = `translateX(${translateX}%)`;
-    }
-    
-    function handleModalTouchEnd(e) {
-        if (!isDragging) return;
-        
-        isDragging = false;
-        const diffX = touchStartX - touchEndX;
-        const diffY = touchStartY - touchEndY;
-        const threshold = 50;
-        
-        // Check for swipe down (close modal)
-        if (diffY > threshold && Math.abs(diffY) > Math.abs(diffX)) {
-            closeModalCarousel();
-            return;
-        }
-        
-        if (Math.abs(diffX) > threshold) {
-            if (diffX > 0) {
-                nextModalSlide();
-            } else {
-                prevModalSlide();
-            }
-        } else {
-            updateModalCarousel();
-        }
-    }
-    
-    window.modalCarousel.addEventListener('touchstart', handleModalTouchStart, { passive: false });
-    window.modalCarousel.addEventListener('touchmove', handleModalTouchMove, { passive: false });
-    window.modalCarousel.addEventListener('touchend', handleModalTouchEnd, { passive: false });
-}
-
-// Close button event listener
-document.getElementById('modalCloseBtn').addEventListener('click', closeModalCarousel);
-
-function closeModalCarousel() {
-    const modal = document.getElementById('modalCarousel');
-    modal.classList.remove('active');
-    document.body.style.overflow = ''; // Restore scrolling
-    window.modalCarousel = null;
-}
-
-// Make close function globally available
-window.closeModalCarousel = closeModalCarousel;
 </script>
 {% endblock %} 

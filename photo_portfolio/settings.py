@@ -176,6 +176,15 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Google Cloud Storage (GCS) settings for image delivery
+# If unset, the app will fall back to serving Google Drive URLs in production
+GCS_PUBLIC_BASE_URL = os.environ.get('GCS_PUBLIC_BASE_URL', '')  # e.g., https://storage.googleapis.com/your-public-bucket
+GCS_PUBLIC_PREFIX = os.environ.get('GCS_PUBLIC_PREFIX', 'ruansonder-r_public_portfolio')
+GCS_PRIVATE_BUCKET = os.environ.get('GCS_PRIVATE_BUCKET', '')
+GCS_PRIVATE_PREFIX = os.environ.get('GCS_PRIVATE_PREFIX', 'Private_Albums')
+GCS_SIGNED_URL_HOURS = int(os.environ.get('GCS_SIGNED_URL_HOURS', '6'))
+GCP_SERVICE_ACCOUNT_JSON = os.environ.get('GCP_SERVICE_ACCOUNT_JSON', '')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

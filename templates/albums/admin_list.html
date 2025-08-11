@@ -40,7 +40,7 @@
                                readonly 
                                class="px-3 py-1 text-xs bg-gray-100 border border-gray-300 rounded text-gray-700 font-mono w-64"
                                id="url-{{ album.id }}">
-                        <button onclick="copyToClipboard('url-{{ album.id }}')" 
+                        <button data-copy-target="#url-{{ album.id }}" 
                                 class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
                             📋 Copy
                         </button>
@@ -75,29 +75,5 @@
 </div>
 {% endif %}
 
-<script>
-function copyToClipboard(elementId) {
-    const element = document.getElementById(elementId);
-    element.select();
-    element.setSelectionRange(0, 99999); // For mobile devices
-    
-    try {
-        document.execCommand('copy');
-        // Show success message
-        const button = element.nextElementSibling;
-        const originalText = button.textContent;
-        button.textContent = '✅ Copied!';
-        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        button.classList.add('bg-green-600');
-        
-        setTimeout(() => {
-            button.textContent = originalText;
-            button.classList.remove('bg-green-600');
-            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
-        }, 2000);
-    } catch (err) {
-        console.error('Failed to copy: ', err);
-    }
-}
-</script>
+{% block extra_js %}{% endblock %}
 {% endblock %} 
