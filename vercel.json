@@ -19,7 +19,7 @@
   "buildCommand": "./build.sh",
   "functions": {
     "api/index.py": {
-      "runtime": "@vercelpython3.10",
+      "runtime": "python@3.10",
       "maxDuration": 30,
       "memory": 1024
     }
