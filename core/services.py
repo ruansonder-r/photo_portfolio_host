@@ -158,28 +158,42 @@ class GoogleDriveService:
     def _get_high_quality_image_url(self, file_id: str) -> str:
         """Get high-quality image URL from Google Drive"""
         try:
-            # Try to get the original image URL
+            # Always try the direct download URL first (don't test it with requests in production)
             original_url = f"https://drive.google.com/uc?id={file_id}&export=download"
             
-            # Test if the URL is accessible
-            import requests
-            response = requests.head(original_url, timeout=5)
-            if response.status_code == 200:
+            # In production, just return the direct URL without testing it
+            # Testing URLs with requests.head() can cause timeouts on Vercel
+            if self._is_production():
                 return original_url
+            
+            # In development, we can afford to test the URL
+            import requests
+            try:
+                response = requests.head(original_url, timeout=3)
+                if response.status_code in [200, 303]:  # 303 is redirect which is normal
+                    return original_url
+            except:
+                pass  # Continue to fallbacks if HEAD request fails
             
             # Fallback to webContentLink if available
             if not self.service:
                 self.authenticate()
             
-            file_info = self.service.files().get(fileId=file_id, fields='webContentLink').execute()
-            if file_info.get('webContentLink'):
-                return file_info['webContentLink']
+            try:
+                file_info = self.service.files().get(fileId=file_id, fields='webContentLink').execute()
+                if file_info.get('webContentLink'):
+                    return file_info['webContentLink']
+            except:
+                pass
             
             # Final fallback to thumbnailLink but with larger size
-            file_info = self.service.files().get(fileId=file_id, fields='thumbnailLink').execute()
-            if file_info.get('thumbnailLink'):
-                # Replace s220 with s1200 for higher quality
-                return file_info['thumbnailLink'].replace('=s220', '=s1200')
+            try:
+                file_info = self.service.files().get(fileId=file_id, fields='thumbnailLink').execute()
+                if file_info.get('thumbnailLink'):
+                    # Replace s220 with s1200 for higher quality
+                    return file_info['thumbnailLink'].replace('=s220', '=s1200')
+            except:
+                pass
             
             return original_url
             
