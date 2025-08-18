@@ -8,7 +8,7 @@
         "runtime": "python3.10",
         "maxDuration": 60
       }
-``    }
+    }
   ],
   "routes": [
     {
