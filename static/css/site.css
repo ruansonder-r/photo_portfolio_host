@@ -149,31 +149,44 @@ h3 { font-size: 1rem; }
 
 .carousel__track {
   display: flex;
+  align-items: center;
   gap: var(--gap);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  border-radius: var(--radius);
 }
 .carousel__track::-webkit-scrollbar { display: none; }
 @media (prefers-reduced-motion: reduce) { .carousel__track { scroll-behavior: auto; } }
 
+/* Leading/trailing space so the first and last photo can still reach the
+   centre of the scrollport. Not snap points themselves, so the carousel
+   always comes to rest on a photo. */
+.carousel__track::before,
+.carousel__track::after { content: ''; flex: 0 0 50%; }
+
+/* Slides take the width of their photo rather than the full container.
+   Portrait shots used to letterbox into a 1920px-wide void; now the
+   neighbouring frames fill that space instead. */
 .carousel__slide {
-  flex: 0 0 100%;
+  flex: 0 0 auto;
   scroll-snap-align: center;
   scroll-snap-stop: always;
   position: relative;
   border-radius: var(--radius);
   overflow: hidden;
+  opacity: .5;
+  transition: opacity .5s var(--ease);
 }
+.carousel__slide.is-active { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .carousel__slide { opacity: 1; } }
 
 .carousel__slide img {
-  width: 100%;
-  height: clamp(320px, 62vh, 760px);
-  object-fit: contain;   /* never crop the hero image */
-  object-position: center;
+  height: clamp(300px, 64vh, 700px);
+  width: auto;
+  max-width: min(92vw, 1100px);
+  object-fit: contain;
 }
 
 .carousel__btn {

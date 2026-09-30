@@ -41,11 +41,14 @@
       });
     }
 
-    function goTo(i) {
+    function goTo(i, instant) {
       index = Math.max(0, Math.min(i, slides.length - 1));
+      var slide = slides[index];
+      // Slides are content-width, so centre the target rather than aligning
+      // its left edge -- otherwise the active photo drifts off to one side.
       track.scrollTo({
-        left: slides[index].offsetLeft - track.offsetLeft,
-        behavior: reduceMotion ? 'auto' : 'smooth'
+        left: slide.offsetLeft - track.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2,
+        behavior: (instant || reduceMotion) ? 'auto' : 'smooth'
       });
     }
 
@@ -59,6 +62,9 @@
         if (gap < bestGap) { bestGap = gap; best = i; }
       });
       index = best;
+      slides.forEach(function (slide, i) {
+        slide.classList.toggle('is-active', i === index);
+      });
       dots.forEach(function (dot, i) {
         dot.setAttribute('aria-current', i === index ? 'true' : 'false');
       });
@@ -99,7 +105,8 @@
       if (event.key === 'ArrowRight') { event.preventDefault(); goTo(index + 1); restart(); }
     });
 
-    window.addEventListener('resize', sync);
+    window.addEventListener('resize', function () { goTo(index, true); sync(); });
+    goTo(0, true);
     sync();
     start();
   }
