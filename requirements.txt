@@ -1,19 +1,10 @@
-# Pinned with lower bounds + compatible-release ceilings so the same file
-# resolves on Vercel's Python 3.12 and on newer local interpreters.
+# Runtime dependencies. Installed by Vercel into the function bundle, so keep
+# this list to what actually serves traffic -- the bundle limit is 225 MB.
 
-# --- Core ---
 Django~=5.2.4
 psycopg[binary]~=3.2,>=3.2.10
 dj-database-url~=2.3
 python-dotenv~=1.0
-
-# --- Static files (serves /static/ from the Python function; no Vercel rewrite needed) ---
 whitenoise~=6.8
-
-# --- Image hosting ---
 cloudinary~=1.41
 Pillow>=11.3,<12
-
-# --- One-time migration off Google Drive only. Safe to remove once migrated. ---
-google-auth~=2.40
-google-api-python-client~=2.177

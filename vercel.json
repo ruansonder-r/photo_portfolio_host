@@ -1,9 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": "pip3 install -r requirements.txt && python3 manage.py collectstatic --noinput",
+  "buildCommand": "DATABASE_URL= python3 manage.py collectstatic --noinput",
+  "outputDirectory": "staticfiles",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
   ],
   "functions": {
     "api/index.py": {

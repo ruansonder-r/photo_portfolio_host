@@ -147,3 +147,8 @@ credentials.json
 # OS
 .DS_Store
 Thumbs.db 
+.vercel
+.env*
+
+# Keep the committed template visible despite the .env* rule Vercel added
+!.env.example

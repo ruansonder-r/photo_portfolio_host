@@ -1,0 +1,29 @@
+# Keep the function bundle small. Vercel installs requirements.txt itself, so
+# the local virtualenv must never be uploaded (it is ~240 MB on its own).
+venv/
+.venv/
+env/
+
+.git/
+.github/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Secrets and local state
+.env
+.env.*
+!.env.example
+.creds/
+db.sqlite3
+*.sqlite3
+
+# Generated on Vercel by the build command, never uploaded
+staticfiles/
+
+# Local tooling / docs not needed at runtime
+.claude/
+.vercel/
+node_modules/
+README.md

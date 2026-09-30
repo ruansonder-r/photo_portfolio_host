@@ -1,0 +1,10 @@
+# Local-only extras for the one-time Google Drive import.
+#   pip install -r requirements-migrate.txt
+#   python manage.py migrate_from_drive
+#
+# Deliberately NOT in requirements.txt: google-api-python-client alone is
+# ~102 MB, and migrate_from_drive runs from a workstation, never on Vercel.
+
+-r requirements.txt
+google-auth~=2.40
+google-api-python-client~=2.177

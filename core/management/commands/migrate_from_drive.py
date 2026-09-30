@@ -46,8 +46,19 @@ class Command(BaseCommand):
     # -- Drive access ------------------------------------------------------
 
     def _drive(self):
-        from google.oauth2 import service_account
-        from googleapiclient.discovery import build
+        # Optional dependency: kept out of requirements.txt because
+        # google-api-python-client is ~102 MB and would blow Vercel's function
+        # size limit, while this command only ever runs locally.
+        try:
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+        except ImportError as exc:
+            raise CommandError(
+                "Google API libraries are not installed. They are intentionally "
+                "excluded from requirements.txt to keep the deployed function small.\n"
+                "Install them for this one-time import with:\n"
+                "    pip install -r requirements-migrate.txt"
+            ) from exc
 
         raw = settings.GOOGLE_DRIVE_CREDENTIALS
         path = settings.GOOGLE_DRIVE_CREDENTIALS_FILE
