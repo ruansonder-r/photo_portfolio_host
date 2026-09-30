@@ -1,45 +1,50 @@
 from django.contrib import admin
-from .models import ClientAlbum, Image
+from django.db.models import Count
+from django.urls import reverse
+from django.utils.html import format_html
+
+from core.models import Photo
+
+from .models import ClientAlbum
+
+
+class AlbumPhotoInline(admin.TabularInline):
+    model = Photo
+    fk_name = "album"
+    extra = 0
+    fields = ["original_filename", "caption", "position"]
+    readonly_fields = ["original_filename"]
+    ordering = ["position"]
 
 
 @admin.register(ClientAlbum)
 class ClientAlbumAdmin(admin.ModelAdmin):
-    list_display = ['name', 'date', 'folder_name', 'created_at']
-    list_filter = ['date', 'created_at']
-    search_fields = ['name', 'description', 'folder_name']
-    readonly_fields = ['id', 'created_at', 'updated_at']
+    list_display = ["name", "date", "num_photos", "is_active", "expires_at", "share_link"]
+    list_filter = ["is_active", "date"]
+    search_fields = ["name", "description"]
+    readonly_fields = ["id", "created_at", "updated_at", "share_link"]
+    date_hierarchy = "date"
+    inlines = [AlbumPhotoInline]
+
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'description', 'date')
+        (None, {"fields": ("name", "date", "description")}),
+        ("Access", {
+            "fields": ("is_active", "expires_at", "share_link"),
+            "description": "The share link is the album's secret. Untick 'is active' to revoke it.",
         }),
-        ('Google Drive Integration', {
-            'fields': ('folder_name',)
-        }),
-        ('System Information', {
-            'fields': ('id', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        ("System", {"fields": ("id", "folder_name", "created_at", "updated_at"), "classes": ("collapse",)}),
     )
 
-
-@admin.register(Image)
-class ImageAdmin(admin.ModelAdmin):
-    list_display = ['name', 'folder_name', 'parent_folder_name', 'downloaded_at', 'size']
-    list_filter = ['folder_name', 'parent_folder_name', 'downloaded_at', 'mime_type']
-    search_fields = ['name', 'google_drive_id', 'folder_name']
-    readonly_fields = ['id', 'google_drive_id', 'downloaded_at', 'last_accessed']
-    fieldsets = (
-        ('Image Information', {
-            'fields': ('name', 'mime_type', 'size', 'width', 'height')
-        }),
-        ('Storage Information', {
-            'fields': ('google_drive_id', 'local_file_path', 'folder_name', 'parent_folder_name')
-        }),
-        ('System Information', {
-            'fields': ('id', 'downloaded_at', 'last_accessed'),
-            'classes': ('collapse',)
-        }),
-    )
-    
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related()
+        return super().get_queryset(request).annotate(_num_photos=Count("photos"))
+
+    @admin.display(description="Photos", ordering="_num_photos")
+    def num_photos(self, obj):
+        return obj._num_photos
+
+    @admin.display(description="Client link")
+    def share_link(self, obj):
+        if not obj.pk:
+            return "—"
+        url = reverse("albums:album_detail", kwargs={"album_id": obj.pk})
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, url)

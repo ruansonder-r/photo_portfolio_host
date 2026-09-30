@@ -1,4 +1,6 @@
-from photo_portfolio.wsgi import application
+"""Vercel entry point.
 
-# Vercel expects the app to be available at this specific location
-app = application
+Vercel's Python runtime looks for a WSGI callable named ``app`` in this module.
+"""
+
+from photo_portfolio.wsgi import application as app  # noqa: F401

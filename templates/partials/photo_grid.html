@@ -1,0 +1,39 @@
+{% load photo_tags %}
+{% comment %}
+Masonry columns: every photo keeps its exact aspect ratio, so no composition
+is ever cropped. Column count is capped at the photo count (--c2/--c3/--c4) so
+a small gallery doesn't leave empty columns. width/height attributes reserve
+the exact space before the bytes arrive, so the page never jumps while loading.
+
+Context: photos, optional show_download + download_url_base.
+{% endcomment %}
+<div class="photo-grid" data-lightbox-group
+     style="--c2: {{ photos|length|at_most:2 }}; --c3: {{ photos|length|at_most:3 }}; --c4: {{ photos|length|at_most:4 }}">
+  {% for photo in photos %}
+    <figure class="photo" style="background-color: {{ photo.placeholder }}">
+      <img src="{{ photo.thumb_src }}"
+           srcset="{{ photo.srcset }}"
+           sizes="{{ photo.sizes_grid }}"
+           width="{{ photo.width }}" height="{{ photo.height }}"
+           alt="{{ photo.alt }}"
+           loading="{% if forloop.counter <= 4 %}eager{% else %}lazy{% endif %}"
+           decoding="async">
+
+      {# Covers the tile so a click anywhere opens the viewer, while staying valid HTML. #}
+      <button type="button" class="photo__open"
+              data-full="{{ photo.full_src }}"
+              data-alt="{{ photo.alt }}"
+              {% if show_download %}data-download="{{ photo.download_url }}"{% endif %}
+              aria-label="Open {{ photo.alt }} in the viewer"></button>
+
+      <figcaption class="photo__overlay">
+        <span class="photo__name">{{ photo.original_filename }}</span>
+        {% if show_download %}
+          <a class="btn btn--sm btn--ghost" data-direct
+             href="{{ download_url_base }}{{ photo.id }}/"
+             aria-label="Download {{ photo.alt }} at full resolution">Save</a>
+        {% endif %}
+      </figcaption>
+    </figure>
+  {% endfor %}
+</div>

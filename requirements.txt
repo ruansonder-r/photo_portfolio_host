@@ -1,8 +1,19 @@
-Django==5.2.4
-psycopg2-binary==2.9.10
-google-auth==2.40.3
-google-auth-oauthlib==1.2.2
-google-auth-httplib2==0.2.0
-google-api-python-client==2.177.0 
-google-cloud-storage==2.18.2
-requests==2.31.0
+# Pinned with lower bounds + compatible-release ceilings so the same file
+# resolves on Vercel's Python 3.12 and on newer local interpreters.
+
+# --- Core ---
+Django~=5.2.4
+psycopg[binary]~=3.2,>=3.2.10
+dj-database-url~=2.3
+python-dotenv~=1.0
+
+# --- Static files (serves /static/ from the Python function; no Vercel rewrite needed) ---
+whitenoise~=6.8
+
+# --- Image hosting ---
+cloudinary~=1.41
+Pillow>=11.3,<12
+
+# --- One-time migration off Google Drive only. Safe to remove once migrated. ---
+google-auth~=2.40
+google-api-python-client~=2.177

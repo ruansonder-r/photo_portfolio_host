@@ -1,20 +1,14 @@
-"""
-WSGI config for photo_portfolio project.
+"""WSGI entry point.
 
-It exposes the WSGI callable as a module-level variable named ``app``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
+WhiteNoise is installed as middleware (see settings.MIDDLEWARE), so static
+files are served by this same application -- no separate static host needed.
 """
 
 import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'photo_portfolio.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "photo_portfolio.settings")
 
 application = get_wsgi_application()
-
-# vercel config
-
-app = application # add this line.
+app = application  # Vercel looks for `app`

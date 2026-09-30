@@ -1,79 +1,60 @@
 {% extends 'base.html' %}
-
-{% block title %}Album Management - Admin{% endblock %}
+{% block title %}Client albums — admin{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-4xl font-bold text-gray-800 mb-2">Private Album Management</h1>
-    <p class="text-xl text-gray-600">Manage client albums and generate sharing links</p>
-</div>
+  <div class="section-head">
+    <p class="section-head__label">Admin</p>
+    <h1>Client albums</h1>
+    <p class="lede">Each link is a shared secret. Untick “active” on an album to revoke it immediately.</p>
+  </div>
 
-<div class="mb-8">
-    <a href="{% url 'admin:albums_clientalbum_add' %}" 
-       class="inline-flex items-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl">
-        ➕ Create New Album
-    </a>
-</div>
+  <div class="btn-row" style="margin-bottom:2rem">
+    <a class="btn" href="{% url 'admin:albums_clientalbum_add' %}">New album</a>
+    <a class="btn btn--ghost" href="{% url 'admin:portfolio_gallery_changelist' %}">Manage galleries</a>
+  </div>
 
-{% if albums %}
-<div class="overflow-x-auto">
-    <table class="w-full border-collapse bg-white rounded-lg shadow-lg overflow-hidden">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Title</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Date</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Folder Name</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Album URL</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 border-b">Actions</th>
-            </tr>
+  {% if albums %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Album</th><th>Date</th><th class="is-numeric">Photos</th>
+            <th>Status</th><th>Client link</th><th></th>
+          </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
-            {% for album in albums %}
-            <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-4 text-sm text-gray-900">{{ album.title }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ album.date|date:"M j, Y" }}</td>
-                <td class="px-6 py-4 text-sm font-mono text-gray-700">{{ album.folder_name }}</td>
-                <td class="px-6 py-4 text-sm">
-                    <div class="flex items-center space-x-2">
-                        <input type="text" 
-                               value="{{ album.full_url }}" 
-                               readonly 
-                               class="px-3 py-1 text-xs bg-gray-100 border border-gray-300 rounded text-gray-700 font-mono w-64"
-                               id="url-{{ album.id }}">
-                        <button data-copy-target="#url-{{ album.id }}" 
-                                class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
-                            📋 Copy
-                        </button>
-                    </div>
-                </td>
-                <td class="px-6 py-4 text-sm">
-                    <div class="flex space-x-2">
-                        <a href="{% url 'albums:album_detail' album_id=album.id %}" 
-                           target="_blank"
-                           class="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
-                            👁️ View
-                        </a>
-                        <a href="{% url 'albums:generate_link' album_id=album.id %}" 
-                           class="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors">
-                            🔗 Generate Link
-                        </a>
-                    <a href="{% url 'admin:albums_clientalbum_change' album.id %}" 
-                       class="inline-flex items-center px-3 py-1 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors">
-                        ✏️ Edit
-                    </a>
-                    </div>
-                </td>
+        <tbody>
+          {% for album in albums %}
+            <tr>
+              <td>{{ album.name }}</td>
+              <td>{{ album.date|date:"j M Y" }}</td>
+              <td class="is-numeric">{{ album.photos.all|length }}</td>
+              <td>
+                {% if album.is_available %}
+                  <span class="pill pill--on">Active</span>
+                {% else %}
+                  <span class="pill pill--off">{% if album.is_active %}Expired{% else %}Revoked{% endif %}</span>
+                {% endif %}
+              </td>
+              <td>
+                <input class="field" type="text" readonly value="{{ album.share_url }}" id="link-{{ album.id }}">
+              </td>
+              <td>
+                <div class="btn-row" style="flex-wrap:nowrap">
+                  <button type="button" class="btn btn--sm btn--ghost" data-copy-target="#link-{{ album.id }}">Copy</button>
+                  <a class="btn btn--sm btn--ghost" href="{{ album.get_absolute_url }}" target="_blank" rel="noopener">View</a>
+                  <a class="btn btn--sm btn--ghost" href="{% url 'admin:albums_clientalbum_change' album.id %}">Edit</a>
+                </div>
+              </td>
             </tr>
-            {% endfor %}
+          {% endfor %}
         </tbody>
-    </table>
-</div>
-{% else %}
-<div class="text-center py-16">
-    <h2 class="text-2xl font-semibold text-gray-600 mb-4">No albums created yet</h2>
-    <p class="text-gray-500">Create your first client album to get started.</p>
-</div>
-{% endif %}
-
-{% block extra_js %}{% endblock %}
-{% endblock %} 
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <h2>No client albums yet</h2>
+      <p>Create one, then upload into it:</p>
+      <p><code>python manage.py upload_photos ~/Exports/Shoot --album "Client name"</code></p>
+    </div>
+  {% endif %}
+{% endblock %}

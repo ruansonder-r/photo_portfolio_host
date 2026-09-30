@@ -1,246 +1,144 @@
-# Django Photographer Portfolio Website
+# Photo Portfolio
 
-A modern, mobile-first Django website for photographers featuring public portfolios and private client albums with Google Drive integration.
+Django site for a photographer: a public portfolio, private client albums, and
+full-resolution delivery through Cloudinary.
 
-## 🎯 Features
+## Why not Google Drive
 
-### Public Portfolio
-- Responsive grid layout (mobile-first design)
-- Dynamic galleries from Google Drive `Public_Portfolio/` folder
-- Subfolders automatically become individual galleries
-- Clean, minimalist design with monospace typography
-
-### Private Client Albums
-- URL format: `/album/<uuid>/`
-- Secure access to private client photos
-- Individual photo downloads
-- Complete album ZIP downloads
-- Integration with Google Drive `Private_Albums/` folder
-
-### Admin Panel
-- Staff-only admin interface
-- Create and manage client albums
-- Google Drive folder name configuration
-- Album preview and management tools
-
-### Contact System
-- Simple mailto: integration
-- Pre-filled email templates
-- No web forms required
-
-## ⚙️ Tech Stack
-
-- **Backend**: Django 5.2.4
-- **Database**: PostgreSQL
-- **Storage**: Google Drive API
-- **Deployment**: Vercel-ready
-- **Design**: Mobile-first, minimalist CSS
-
-## 📁 Project Structure
+The site used to serve images straight from Google Drive. That cannot work, and
+it is not a configuration mistake — Google enforces it:
 
 ```
-photo_portfolio_host/
-├── photo_portfolio/          # Main Django project
-├── portfolio/               # Public portfolio app
-├── albums/                  # Private albums app
-├── core/                    # Shared services
-├── templates/               # HTML templates
-├── static/                  # Static files
-├── requirements.txt         # Python dependencies
-├── vercel.json             # Vercel deployment config
-└── README.md               # This file
+$ curl -sSI -L "https://drive.google.com/uc?id=<id>&export=download"
+cross-origin-resource-policy: same-site      # browsers refuse to render it cross-origin
+content-disposition: attachment              # served as a download, not an image
+
+$ curl -H "Referer: https://www.ruansonder-r.com/" -H "Sec-Fetch-Site: cross-site" ...
+HTTP 403                                     # hotlinking is blocked outright
 ```
 
-## 🚀 Quick Start
+`curl` without those headers returns 200, which is why the URLs looked fine when
+tested by hand while every `<img>` on the live site rendered blank.
 
-### 1. Environment Setup
+On top of that, Drive only ever serves the untouched original. Sampled masters
+ran 2–14 MB each; a single page pulled roughly 80 MB.
+
+## How images work now
+
+Masters are uploaded to Cloudinary once and indexed in Postgres. Rendering a
+page is **pure SQL** — every URL is built by local string formatting and HMAC
+signing, so no external API is called while serving a request.
+
+| | Before | After |
+|---|---|---|
+| Per-photo transfer | 2–14 MB original | ~47 KB JPEG, ~18 KB AVIF at 800px |
+| API calls per page | 1 Drive call per gallery | 0 |
+| DB queries per gallery | n/a | 3, regardless of photo count |
+
+Each `<img>` ships a `srcset` of 400/800/1200/1600/2400px renditions with
+`f_auto` (AVIF/WebP negotiated per browser) and `q_auto`. The 800px and 1600px
+versions are pre-rendered at upload time via Cloudinary *eager* transformations,
+so the first visitor never waits on a cold transform.
+
+- **Public galleries** use `upload` delivery — plain cacheable CDN URLs.
+- **Client albums** use `authenticated` delivery with signed URLs. The signature
+  covers the public_id and transformation, so an album photo cannot be fetched
+  by guessing. Album pages are sent `no-store, private`.
+
+## Setup
 
 ```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 2. Database Setup
-
-```bash
-# Set up PostgreSQL database
-# Create database: photo_portfolio
-# Update settings.py with your database credentials
-
-# Run migrations
-python manage.py makemigrations
+cp .env.example .env          # then fill in CLOUDINARY_URL
 python manage.py migrate
-
-# Create superuser
 python manage.py createsuperuser
-```
-
-### 3. Google Drive Integration
-
-1. **Create Google Cloud Project**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project
-   - Enable Google Drive API
-
-2. **Create Service Account**
-   - Go to "APIs & Services" > "Credentials"
-   - Create Service Account
-   - Download JSON credentials file
-
-3. **Set up Google Drive folders**
-   - Create `Public_Portfolio/` folder
-   - Create `Private_Albums/` folder
-   - Share folders with service account email
-
-4. **Configure Environment Variables**
-   ```bash
-   export GOOGLE_DRIVE_CREDENTIALS_FILE="path/to/credentials.json"
-   export GOOGLE_DRIVE_TOKEN_FILE="token.json"
-   ```
-
-### 4. Run Development Server
-
-```bash
 python manage.py runserver
 ```
 
-Visit `http://localhost:8000` to see your portfolio!
+`DATABASE_URL` is optional locally — without it the project uses SQLite.
 
-## 🔧 Configuration
+### Cloudinary
 
-### Environment Variables
+Create an account, then copy the **API Environment variable** from the dashboard
+into `.env` as `CLOUDINARY_URL=cloudinary://<key>:<secret>@<cloud>`.
+
+## Getting photos in
+
+Upload straight from your camera exports — nothing passes through Drive, so the
+masters keep their full resolution:
 
 ```bash
-# Database
-DB_NAME=photo_portfolio
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
+# Public gallery
+python manage.py upload_photos ~/Exports/Smith_Wedding --gallery "Smith Wedding"
 
-# Google Drive
-GOOGLE_DRIVE_CREDENTIALS_FILE=path/to/credentials.json
-GOOGLE_DRIVE_TOKEN_FILE=token.json
+# Private client album
+python manage.py upload_photos ~/Exports/Smith_Wedding --album "Smith Wedding" --date 2025-03-09
+
+# Homepage carousel (hidden gallery, photos flagged as featured)
+python manage.py upload_photos ~/Exports/Best_Of --gallery Featured --unpublished --featured
+
+python manage.py upload_photos <dir> --gallery X --dry-run   # preview
+python manage.py upload_photos <dir> --gallery X --replace   # re-upload a gallery
 ```
 
-### Customization
+### One-time import from Drive
 
-1. **Update Contact Information**
-   - Edit `templates/portfolio/contact.html`
-   - Update email address and contact details
-
-2. **Customize Design**
-   - Modify CSS in `templates/base.html`
-   - Update colors, fonts, and layout
-
-3. **Add Custom Galleries**
-   - Create subfolders in Google Drive `Public_Portfolio/`
-   - Images automatically appear on the website
-
-## 📱 Mobile-First Design
-
-The website is built with a mobile-first approach:
-
-- **Mobile**: Single-column vertical layout
-- **Tablet**: Two-column grid
-- **Desktop**: Three-column grid with hover effects
-
-## 🔒 Security Features
-
-- UUID-based album URLs for privacy
-- Staff-only admin access
-- Secure Google Drive API integration
-- No sensitive data in templates
-
-## 🚀 Deployment
-
-### Vercel Deployment
-
-1. **Connect Repository**
-   ```bash
-   # Push to GitHub/GitLab
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. **Deploy on Vercel**
-   - Connect your repository to Vercel
-   - Set environment variables in Vercel dashboard
-   - Deploy automatically
-
-### Environment Variables for Production
-
-Set these in your Vercel dashboard:
-- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`
-- `GOOGLE_DRIVE_CREDENTIALS_FILE`, `GOOGLE_DRIVE_TOKEN_FILE`
-- `SECRET_KEY` (generate a new one for production)
-- `DEBUG=False`
-
-## 📊 Admin Usage
-
-### Creating Client Albums
-
-1. **Access Admin Panel**
-   - Go to `/admin/`
-   - Login with superuser credentials
-
-2. **Create New Album**
-   - Click "Client Albums" > "Add Client Album"
-   - Fill in: Title, Date, Description
-   - Set Google Drive folder name (must match subfolder in `Private_Albums/`)
-
-3. **Share Album URL**
-   - Copy the album URL: `/album/<uuid>/`
-   - Send to client for private access
-
-## 🛠️ Development
-
-### Adding New Features
-
-1. **Create New App**
-   ```bash
-   python manage.py startapp new_app
-   ```
-
-2. **Add to INSTALLED_APPS**
-   - Update `photo_portfolio/settings.py`
-
-3. **Create Views and URLs**
-   - Follow existing patterns in `portfolio/` and `albums/`
-
-### Testing
+Only needed to bring the existing library across. Set `GOOGLE_DRIVE_CREDENTIALS`
+(the service-account JSON) first.
 
 ```bash
-# Run tests
+python manage.py migrate_from_drive --dry-run     # show the plan
+python manage.py migrate_from_drive --limit 5     # try a handful
+python manage.py migrate_from_drive               # everything
+```
+
+Mapping: `Public_Portfolio/public/*` → homepage carousel,
+`Public_Portfolio/<Name>/*` → public gallery, `Private_Albums/<Name>/*` → client album.
+
+Once this has run, `google-auth` and `google-api-python-client` can be dropped
+from `requirements.txt`.
+
+## Client albums
+
+Create one in `/admin/`, upload into it, then share `/album/<uuid>/`. The UUID is
+the secret. Untick **is active** to revoke a link immediately, or set
+**expires at** for an automatic cutoff — both make the URL return 404.
+
+"Download all" redirects to a Cloudinary-generated ZIP, so a 400 MB album never
+passes through the web process.
+
+## Layout
+
+```
+core/       storage seam (storage.py), Photo index, ingest, upload commands
+portfolio/  public galleries
+albums/     private client albums
+templates/  base + partials/photo_grid.html + partials/lightbox.html
+static/     hand-written CSS/JS (no build step)
+```
+
+`core/storage.py` is the only module that imports `cloudinary`. Swapping to
+ImageKit, S3 or R2 means writing one class with the same methods.
+
+## Tests
+
+```bash
 python manage.py test
-
-# Check for issues
-python manage.py check
 ```
 
-## 🤝 Contributing
+## Deployment (Vercel)
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+Static files are served by WhiteNoise from inside the WSGI app, because Vercel's
+Python runtime publishes no static directory — that was the cause of the
+`/static/*` 404s that left the live site with no CSS or JS at all.
 
-## 📄 License
+Required environment variables:
 
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For issues and questions:
-- Check the Django documentation
-- Review Google Drive API documentation
-- Open an issue on GitHub
-
----
-
-**Built with ❤️ using Django and Google Drive API** 
+| Variable | Notes |
+|---|---|
+| `SECRET_KEY` | Required when `DEBUG` is off; startup fails loudly without it |
+| `DATABASE_URL` | Postgres connection string |
+| `CLOUDINARY_URL` | `cloudinary://<key>:<secret>@<cloud>` |
+| `DEBUG` | Leave unset (defaults to off) |
+| `ALLOWED_HOSTS` | Optional; sensible defaults are built in |

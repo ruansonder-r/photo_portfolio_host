@@ -1,0 +1,41 @@
+{% comment %}
+Single full-screen viewer. One image is on screen at a time — the previous
+implementation laid every slide side by side because its container had no
+overflow rule.
+{% endcomment %}
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" aria-hidden="true">
+  <div class="lightbox__bar">
+    <span class="lightbox__count" data-lightbox-count></span>
+    <button type="button" class="lightbox__btn" data-lightbox-close aria-label="Close viewer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="lightbox__stage" data-lightbox-stage>
+    <button type="button" class="lightbox__btn lightbox__nav lightbox__nav--prev" data-lightbox-prev aria-label="Previous photo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <img alt="" data-lightbox-image>
+
+    <button type="button" class="lightbox__btn lightbox__nav lightbox__nav--next" data-lightbox-next aria-label="Next photo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="lightbox__footer">
+    <span data-lightbox-caption></span>
+    <a class="btn btn--sm" data-lightbox-download href="#" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Full resolution
+    </a>
+  </div>
+</div>

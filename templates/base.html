@@ -1,64 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ PHOTOGRAPHER_NAME }} Portfolio{% endblock %}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;600&display=swap" rel="stylesheet">
-    {% load static %}
-    <script>
-        tailwind = { config: { theme: { extend: { fontFamily: { 'mono': ['Source Code Pro', 'monospace'] } } } } };
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{% static 'css/site.css' %}">
-    {% block extra_css %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}{{ PHOTOGRAPHER_NAME }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}Photography by {{ PHOTOGRAPHER_NAME }} — {{ PHOTOGRAPHER_LOCATION }}.{% endblock %}">
+  {% block meta %}{% endblock %}
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <header>
-        <div class="container">
-            <nav>
-                <a href="{% url 'portfolio:home' %}" class="logo">{{ PHOTOGRAPHER_NAME }}</a>
-                <ul class="nav-links">
-                    <li><a href="{% url 'portfolio:home' %}">Portfolio</a></li>
-                    <li><a href="{% url 'portfolio:contact' %}">Contact</a></li>
-                    {% if user.is_staff %}
-                    <li><a href="{% url 'albums:admin_list' %}" class="admin-link show">Private Albums</a></li>
-                    <li><a href="{% url 'admin:index' %}" class="admin-link show">Admin</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-    </header>
-    
-    <main>
-        <div class="container">
-            {% block content %}{% endblock %}
-        </div>
-    </main>
-    
-    <!-- Modal Carousel -->
-    <div class="modal-carousel" id="modalCarousel">
-        <div class="modal-carousel-container">
-            <button class="modal-close-btn" id="modalCloseBtn">×</button>
-            <div class="modal-carousel-content">
-                <div class="carousel" id="modalCarouselInner">
-                    <!-- Modal carousel slides will be populated here -->
-                </div>
-                <button class="carousel-nav carousel-prev" id="modalCarouselPrev">●</button>
-                <button class="carousel-nav carousel-next" id="modalCarouselNext">●</button>
-            </div>
-        </div>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="{% url 'portfolio:home' %}">{{ PHOTOGRAPHER_NAME }}</a>
+      <nav aria-label="Primary">
+        <ul class="nav">
+          <li><a href="{% url 'portfolio:home' %}"{% if request.resolver_match.url_name == 'home' %} aria-current="page"{% endif %}>Work</a></li>
+          <li><a href="{% url 'portfolio:contact' %}"{% if request.resolver_match.url_name == 'contact' %} aria-current="page"{% endif %}>Contact</a></li>
+          {% if user.is_staff %}
+            <li><a class="is-admin" href="{% url 'albums:admin_list' %}">Albums</a></li>
+            <li><a class="is-admin" href="{% url 'admin:index' %}">Admin</a></li>
+          {% endif %}
+        </ul>
+      </nav>
     </div>
-    
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 {{ PHOTOGRAPHER_NAME }} Portfolio. All rights reserved.</p>
-        </div>
-    </footer>
-    <script src="{% static 'js/site.js' %}"></script>
-    {% block extra_js %}{% endblock %}
+  </header>
+
+  <main id="main">
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <span>&copy; {{ CURRENT_YEAR }} {{ PHOTOGRAPHER_NAME }}</span>
+      <span>{{ PHOTOGRAPHER_LOCATION }}</span>
+      <a href="{{ INSTAGRAM_URL }}" rel="me noopener" target="_blank">@{{ PHOTOGRAPHER_HANDLE }}</a>
+    </div>
+  </footer>
+
+  {% include 'partials/lightbox.html' %}
+
+  <script src="{% static 'js/site.js' %}" defer></script>
+  {% block extra_js %}{% endblock %}
 </body>
-</html> 
+</html>
