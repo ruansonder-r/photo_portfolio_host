@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import re
+import tempfile
 from pathlib import Path
 
 from django.conf import settings
@@ -40,6 +41,68 @@ def parse_exif_datetime(value) -> dt.datetime | None:
     except ValueError:
         return None
     return timezone.make_aware(naive, timezone.get_default_timezone())
+
+
+# Cloudinary rejects image uploads above this on the free plan.
+DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+# Quality ladder tried before giving up resolution.
+_QUALITY_STEPS = (95, 92, 88, 84, 80, 75)
+
+
+def prepare_for_upload(
+    path: Path, *, max_bytes: int = DEFAULT_MAX_UPLOAD_BYTES, max_edge: int = 0
+) -> tuple[Path, bool, str]:
+    """Return an upload-ready copy of ``path``.
+
+    Returns ``(path_to_upload, is_temporary, note)``. Resolution is given up
+    only after re-encoding alone fails to get under ``max_bytes``, so a master
+    keeps as many pixels as the plan allows.
+    """
+    from PIL import Image
+
+    size = path.stat().st_size
+    with Image.open(path) as probe:
+        width, height = probe.size
+        exif = probe.info.get("exif")
+
+    too_big = max_bytes and size > max_bytes
+    too_wide = max_edge and max(width, height) > max_edge
+    if not (too_big or too_wide):
+        return path, False, ""
+
+    with Image.open(path) as im:
+        im = im.convert("RGB")
+        if too_wide:
+            im.thumbnail((max_edge, max_edge), Image.LANCZOS)
+
+        handle = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        handle.close()
+        out = Path(handle.name)
+
+        scale = 1.0
+        while True:
+            work = im
+            if scale < 1.0:
+                work = im.resize(
+                    (max(1, int(im.width * scale)), max(1, int(im.height * scale))),
+                    Image.LANCZOS,
+                )
+            for quality in _QUALITY_STEPS:
+                save_kwargs = dict(quality=quality, optimize=True, progressive=True)
+                if exif:
+                    save_kwargs["exif"] = exif
+                work.save(out, "JPEG", **save_kwargs)
+                if not max_bytes or out.stat().st_size <= max_bytes:
+                    note = (
+                        f"{width}x{height} {size / 1048576:.1f}MB -> "
+                        f"{work.width}x{work.height} {out.stat().st_size / 1048576:.1f}MB q{quality}"
+                    )
+                    return out, True, note
+            scale *= 0.85
+            if min(im.width, im.height) * scale < 800:
+                note = f"could not fit under {max_bytes / 1048576:.0f}MB"
+                return out, True, note
 
 
 def iter_image_files(directory: Path) -> list[Path]:

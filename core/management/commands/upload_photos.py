@@ -42,6 +42,19 @@ class Command(BaseCommand):
             action="store_true",
             help="Delete photos already indexed for this target before uploading",
         )
+        parser.add_argument(
+            "--max-mb",
+            type=float,
+            default=10.0,
+            help="Re-encode anything larger than this before upload "
+            "(default 10, Cloudinary's free-plan image limit). 0 disables.",
+        )
+        parser.add_argument(
+            "--max-edge",
+            type=int,
+            default=0,
+            help="Cap the longest side in pixels before upload (default: unchanged)",
+        )
         parser.add_argument("--dry-run", action="store_true", help="List what would be uploaded")
 
     def handle(self, *args, **options):
@@ -92,11 +105,17 @@ class Command(BaseCommand):
         start = owner.photos.count()
         uploaded = failed = 0
 
+        max_bytes = int(options["max_mb"] * 1024 * 1024) if options["max_mb"] else 0
+
         for offset, path in enumerate(files):
             label = f"[{offset + 1}/{len(files)}] {path.name}"
+            source, is_temp, note = path, False, ""
             try:
+                source, is_temp, note = ingest.prepare_for_upload(
+                    path, max_bytes=max_bytes, max_edge=options["max_edge"]
+                )
                 photo = ingest.ingest(
-                    str(path),
+                    str(source),
                     gallery=gallery,
                     album=album,
                     position=start + offset,
@@ -109,9 +128,13 @@ class Command(BaseCommand):
                 failed += 1
                 self.stderr.write(self.style.ERROR(f"{label}  FAILED: {exc}"))
                 continue
+            finally:
+                if is_temp and source != path:
+                    Path(source).unlink(missing_ok=True)
 
             uploaded += 1
-            self.stdout.write(f"{label}  ok  {photo.width}x{photo.height}")
+            suffix = f"  [fitted: {note}]" if note else ""
+            self.stdout.write(f"{label}  ok  {photo.width}x{photo.height}{suffix}")
 
         self.stdout.write("")
         self.stdout.write(self.style.SUCCESS(f"Uploaded {uploaded} photo(s)"))

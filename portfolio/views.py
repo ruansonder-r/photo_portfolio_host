@@ -11,7 +11,10 @@ from portfolio.models import Gallery
 # because each invocation got a fresh empty in-process cache.
 public_cache = cache_control(public=True, max_age=settings.PUBLIC_PAGE_CACHE_SECONDS)
 
-MAX_CAROUSEL_PHOTOS = 12
+# Carousel slides are lazy-loaded apart from the first, so the ceiling is
+# about curation rather than page weight. Kept high enough that a curated
+# featured set is shown in full rather than silently truncated.
+MAX_CAROUSEL_PHOTOS = 24
 
 
 def _published_galleries():
