@@ -15,10 +15,17 @@ MAX_CAROUSEL_PHOTOS = 12
 
 
 def _published_galleries():
+    """Published galleries that actually have photos in them.
+
+    An empty gallery renders as a blank card advertising nothing, which is
+    what a half-finished import looks like to a visitor. Direct links still
+    resolve and show the gallery's own empty state.
+    """
     return (
         Gallery.objects.published()
         .select_related("cover")
         .annotate(num_photos=Count("photos"))
+        .filter(num_photos__gt=0)
     )
 
 

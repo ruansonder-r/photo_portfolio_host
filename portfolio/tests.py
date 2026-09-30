@@ -48,6 +48,13 @@ class GalleryViewTests(TestCase):
         with self.assertNumQueries(3):
             self.client.get(self.gallery.get_absolute_url())
 
+    def test_empty_gallery_is_not_advertised_on_the_home_page(self):
+        Gallery.objects.create(slug="half-imported", title="Half Imported")
+        response = self.client.get(reverse("portfolio:home"))
+        self.assertNotContains(response, "Half Imported")
+        # ...but a direct link still works and shows its own empty state.
+        self.assertEqual(self.client.get("/gallery/half-imported/").status_code, 200)
+
     def test_cover_falls_back_to_the_first_photo(self):
         self.assertIsNotNone(self.gallery.cover_photo)
 
