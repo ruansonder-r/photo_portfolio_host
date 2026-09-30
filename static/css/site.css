@@ -417,7 +417,30 @@ td.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .site-footer a { text-decoration: none; }
 .site-footer a:hover { color: var(--text); }
 
-.meta-list { list-style: none; padding: 0; display: grid; gap: .6rem; margin-top: 2.5rem; }
-.meta-list div { display: flex; gap: 1rem; justify-content: center; font-size: .8125rem; }
-.meta-list dt { color: var(--muted); min-width: 7rem; text-align: right; }
-.meta-list dd { margin: 0; }
+/* Two real columns, centred as a unit.
+   The previous version centred each row independently with a 7rem min-width
+   right-aligned label, which left phantom space to the left of every label
+   and none to the right of the value -- the block read as shifted right on a
+   phone, and the labels never lined up with each other either. */
+.meta-list {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  justify-content: center;
+  gap: .55rem 1rem;
+  margin-top: 2.5rem;
+  list-style: none;
+  padding: 0;
+}
+/* Keeps the semantic dl > div > dt+dd markup while letting dt/dd be the
+   actual grid items. */
+.meta-list > div { display: contents; }
+.meta-list dt { color: var(--muted); text-align: right; }
+.meta-list dd { margin: 0; text-align: left; }
+
+/* Below this the two columns no longer fit side by side on the narrowest
+   handsets, so stack label over value rather than overflow. */
+@media (max-width: 430px) {
+  .meta-list { grid-template-columns: 1fr; justify-items: center; gap: 0; }
+  .meta-list dt { text-align: center; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
+  .meta-list dd { text-align: center; margin-bottom: .9rem; }
+}
