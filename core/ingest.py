@@ -149,8 +149,21 @@ def ingest(
         raise ValueError("Provide exactly one of gallery or album")
 
     private = album is not None
+    # When `source` is a re-encoded temp file, use_filename would name the asset
+    # after the tempfile (portfolio/featured/tmpcyg7isbe). Pin the public_id to
+    # the photographer's own filename so the media library stays readable and
+    # downloads arrive with a sensible name.
+    explicit_id = ""
+    if display_name:
+        stem = Path(display_name).stem
+        if stem and stem != Path(str(source)).stem:
+            explicit_id = re.sub(r"[^A-Za-z0-9_\-]+", "_", stem) or stem
+
     asset = photo_store.upload(
-        source, folder=cloudinary_folder(gallery=gallery, album=album), private=private
+        source,
+        folder=cloudinary_folder(gallery=gallery, album=album),
+        private=private,
+        public_id=explicit_id,
     )
 
     filename = display_name or asset.original_filename or Path(str(source)).name

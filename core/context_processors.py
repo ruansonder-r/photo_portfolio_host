@@ -6,6 +6,9 @@ from django.utils import timezone
 def site_info(request):
     """Site-wide identity, overridable by environment without a code change."""
     return {
+        # Path only: a canonical URL carrying whatever query string the visitor
+        # arrived with tells crawlers every variant is its own canonical page.
+        "canonical_url": request.build_absolute_uri(request.path),
         "PHOTOGRAPHER_NAME": os.environ.get("PHOTOGRAPHER_NAME", "Ruansonder_R"),
         "PHOTOGRAPHER_HANDLE": os.environ.get("PHOTOGRAPHER_HANDLE", "ruansonder_R"),
         "PHOTOGRAPHER_EMAIL": os.environ.get("PHOTOGRAPHER_EMAIL", "ruansonder.r@gmail.com"),

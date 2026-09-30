@@ -8,7 +8,7 @@
   {% firstof page_description default_description as meta_description %}
   <title>{{ meta_title }}</title>
   <meta name="description" content="{{ meta_description }}">
-  <link rel="canonical" href="{{ request.build_absolute_uri }}">
+  <link rel="canonical" href="{{ canonical_url }}">
 
   {# Link previews. Omitted entirely on private album pages: a signed image
      URL must never be handed to a link-preview crawler. #}
@@ -17,7 +17,7 @@
     <meta property="og:site_name" content="{{ PHOTOGRAPHER_NAME }}">
     <meta property="og:title" content="{{ meta_title }}">
     <meta property="og:description" content="{{ meta_description }}">
-    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:url" content="{{ canonical_url }}">
     <meta property="og:image" content="{{ share_image }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">

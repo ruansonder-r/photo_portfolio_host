@@ -79,6 +79,11 @@ class SocialMetadataTests(TestCase):
         self.assertIn("w_1200", body)
         self.assertIn("h_630", body)
 
+    def test_canonical_url_drops_the_query_string(self):
+        body = self.client.get(reverse("portfolio:home") + "?utm_source=instagram&cb=1").content.decode()
+        self.assertIn('rel="canonical" href="http://testserver/"', body)
+        self.assertNotIn("utm_source", body.split("</head>")[0])
+
     def test_gallery_preview_uses_the_gallery_title(self):
         body = self.client.get(self.gallery.get_absolute_url()).content.decode()
         self.assertIn('property="og:title" content="Sunset Shoot"', body)
