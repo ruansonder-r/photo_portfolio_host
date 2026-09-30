@@ -10,8 +10,10 @@
   <meta name="description" content="{{ meta_description }}">
   <link rel="canonical" href="{{ canonical_url }}">
 
-  {# Link previews. Omitted entirely on private album pages: a signed image
-     URL must never be handed to a link-preview crawler. #}
+  {% comment %}
+    Link previews. Omitted entirely on private album pages: a signed image URL
+    must never be handed to a link-preview crawler.
+  {% endcomment %}
   {% if share_image %}
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{ PHOTOGRAPHER_NAME }}">
@@ -68,7 +70,10 @@
     <div class="container site-footer__inner">
       <span>&copy; {{ CURRENT_YEAR }} {{ PHOTOGRAPHER_NAME }}</span>
       <span>{{ PHOTOGRAPHER_LOCATION }}</span>
-      <a href="{{ INSTAGRAM_URL }}" rel="me noopener" target="_blank">@{{ PHOTOGRAPHER_HANDLE }}</a>
+      <span>
+        {% if WHATSAPP_URL %}<a href="{{ WHATSAPP_URL }}" target="_blank" rel="noopener">WhatsApp</a> ·{% endif %}
+        <a href="{{ INSTAGRAM_URL }}" rel="me noopener" target="_blank">@{{ PHOTOGRAPHER_HANDLE }}</a>
+      </span>
     </div>
   </footer>
 

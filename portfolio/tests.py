@@ -79,6 +79,15 @@ class SocialMetadataTests(TestCase):
         self.assertIn("w_1200", body)
         self.assertIn("h_630", body)
 
+    def test_no_template_comment_leaks_into_the_page(self):
+        # Django's {# #} comment only works on a single line; a multi-line one
+        # renders as visible text. This shipped to production once.
+        for url in (reverse("portfolio:home"), reverse("portfolio:contact")):
+            body = self.client.get(url).content.decode()
+            self.assertNotIn("{#", body)
+            self.assertNotIn("#}", body)
+            self.assertNotIn("Link previews", body)
+
     def test_canonical_url_drops_the_query_string(self):
         body = self.client.get(reverse("portfolio:home") + "?utm_source=instagram&cb=1").content.decode()
         self.assertIn('rel="canonical" href="http://testserver/"', body)
@@ -128,3 +137,12 @@ class ContactViewTests(TestCase):
         response = self.client.get(reverse("portfolio:contact"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "mailto:")
+
+    def test_contact_page_offers_whatsapp(self):
+        response = self.client.get(reverse("portfolio:contact"))
+        # wa.me wants digits only -- no +, spaces or dashes.
+        self.assertContains(response, "https://wa.me/27828139850")
+        self.assertNotContains(response, "wa.me/+27")
+
+    def test_whatsapp_is_reachable_from_every_page(self):
+        self.assertContains(self.client.get(reverse("portfolio:home")), "wa.me/")

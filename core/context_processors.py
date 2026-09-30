@@ -1,11 +1,29 @@
 import os
+import re
+from urllib.parse import quote
 
 from django.utils import timezone
+
+# wa.me needs the number in international format with no +, spaces or dashes.
+WHATSAPP_GREETING = "Hi Ruan, I'd like to enquire about a shoot."
+
+
+def _whatsapp(raw: str) -> tuple[str, str]:
+    """Return (display number, wa.me link) for a raw phone number."""
+    digits = re.sub(r"\D", "", raw or "")
+    if not digits:
+        return "", ""
+    return raw.strip(), f"https://wa.me/{digits}?text={quote(WHATSAPP_GREETING)}"
 
 
 def site_info(request):
     """Site-wide identity, overridable by environment without a code change."""
+    whatsapp_display, whatsapp_url = _whatsapp(
+        os.environ.get("PHOTOGRAPHER_WHATSAPP", "+27 82 813 9850")
+    )
     return {
+        "PHOTOGRAPHER_WHATSAPP": whatsapp_display,
+        "WHATSAPP_URL": whatsapp_url,
         # Path only: a canonical URL carrying whatever query string the visitor
         # arrived with tells crawlers every variant is its own canonical page.
         "canonical_url": request.build_absolute_uri(request.path),
