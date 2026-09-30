@@ -48,6 +48,10 @@ EAGER_WIDTHS: tuple[int, ...] = (800, 1600)
 SIZES_GRID = "(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
 SIZES_FULL = "100vw"
 
+# Facebook/WhatsApp/LinkedIn crop link previews to roughly 1.91:1 and will not
+# render AVIF or WebP, so social images are pinned to JPEG at a fixed size.
+SOCIAL_WIDTH, SOCIAL_HEIGHT = 1200, 630
+
 PUBLIC_DELIVERY_TYPE = "upload"
 PRIVATE_DELIVERY_TYPE = "authenticated"
 
@@ -171,6 +175,24 @@ class CloudinaryPhotoStore:
             opts.update(_transformation(width))
             parts.append(f"{cloudinary.utils.cloudinary_url(public_id, **opts)[0]} {width}w")
         return ", ".join(parts)
+
+    def social_url(self, public_id: str, *, version: str = "", private: bool = False) -> str:
+        """1200x630 JPEG for link previews.
+
+        ``g_auto`` keeps the subject in frame when a portrait shot is cropped
+        to a landscape card.
+        """
+        self._require()
+        opts = self._base_options(version=version, private=private)
+        opts.update(
+            width=SOCIAL_WIDTH,
+            height=SOCIAL_HEIGHT,
+            crop="fill",
+            gravity="auto",
+            quality="auto:good",
+            format="jpg",
+        )
+        return cloudinary.utils.cloudinary_url(public_id, **opts)[0]
 
     def original_url(self, public_id: str, *, version: str = "", private: bool = False) -> str:
         """Untouched full-resolution master, forced to download rather than display."""

@@ -2,7 +2,6 @@
 {% comment %} Private client delivery. album.name — the old template read album.title,
 which does not exist on the model, so every album page rendered a blank heading. {% endcomment %}
 
-{% block title %}{{ album.name }} — Private album{% endblock %}
 {% block meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
 
 {% block content %}

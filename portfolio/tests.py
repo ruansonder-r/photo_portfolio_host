@@ -59,6 +59,65 @@ class GalleryViewTests(TestCase):
         self.assertIsNotNone(self.gallery.cover_photo)
 
 
+class SocialMetadataTests(TestCase):
+    def setUp(self):
+        import cloudinary
+
+        cloudinary.config(cloud_name="testcloud", api_key="1", api_secret="s", secure=True)
+        self.gallery = Gallery.objects.create(slug="g", title="Sunset Shoot")
+        self.photo = Photo.objects.create(
+            public_id="portfolio/g/a", gallery=self.gallery, width=3000, height=2000,
+            original_filename="_MG_1.jpg",
+        )
+
+    def test_home_emits_open_graph_tags_with_a_real_image(self):
+        body = self.client.get(reverse("portfolio:home")).content.decode()
+        for tag in ('property="og:title"', 'property="og:image"',
+                    'property="og:description"', 'name="twitter:card"', 'rel="canonical"'):
+            self.assertIn(tag, body)
+        # 1200x630 JPEG, because link-preview crawlers render neither AVIF nor WebP.
+        self.assertIn("w_1200", body)
+        self.assertIn("h_630", body)
+
+    def test_gallery_preview_uses_the_gallery_title(self):
+        body = self.client.get(self.gallery.get_absolute_url()).content.decode()
+        self.assertIn('property="og:title" content="Sunset Shoot"', body)
+
+    def test_alt_text_is_never_a_filename(self):
+        body = self.client.get(self.gallery.get_absolute_url()).content.decode()
+        self.assertNotIn('alt="_MG_1.jpg"', body)
+        self.assertIn("Sunset Shoot", body)
+
+
+class SitemapAndRobotsTests(TestCase):
+    def setUp(self):
+        import cloudinary
+
+        cloudinary.config(cloud_name="testcloud", api_key="1", api_secret="s", secure=True)
+        self.gallery = Gallery.objects.create(slug="visible", title="Visible")
+        Photo.objects.create(public_id="p/1", gallery=self.gallery, width=10, height=10)
+
+    def test_robots_allows_the_site_but_blocks_private_areas(self):
+        body = self.client.get("/robots.txt").content.decode()
+        self.assertIn("Disallow: /album/", body)
+        self.assertIn("Disallow: /admin/", body)
+        self.assertIn("Sitemap: http://testserver/sitemap.xml", body)
+
+    def test_sitemap_lists_published_galleries(self):
+        body = self.client.get("/sitemap.xml").content.decode()
+        self.assertIn("/gallery/visible/", body)
+
+    def test_sitemap_never_leaks_a_private_album_url(self):
+        import datetime as dt
+
+        from albums.models import ClientAlbum
+
+        album = ClientAlbum.objects.create(name="Private", date=dt.date(2025, 1, 1))
+        body = self.client.get("/sitemap.xml").content.decode()
+        self.assertNotIn(str(album.pk), body)
+        self.assertNotIn("/album/", body)
+
+
 class ContactViewTests(TestCase):
     def test_contact_page_renders(self):
         response = self.client.get(reverse("portfolio:contact"))

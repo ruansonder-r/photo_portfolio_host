@@ -48,11 +48,23 @@ class PhotoPresentationTests(TestCase):
         self.assertEqual(photo.aspect_value, 1.5)
         self.assertEqual(photo.aspect_ratio, "3 / 2")
 
-    def test_alt_prefers_caption_then_filename(self):
-        photo = make_photo(gallery=self.gallery, original_filename="IMG_1.jpg")
-        self.assertEqual(photo.alt, "IMG_1.jpg")
-        photo.caption = "Bride at sunset"
+    def test_alt_prefers_a_caption_when_one_is_set(self):
+        photo = make_photo(gallery=self.gallery, original_filename="IMG_1.jpg", caption="Bride at sunset")
         self.assertEqual(photo.alt, "Bride at sunset")
+
+    def test_alt_omits_the_name_of_an_unpublished_gallery(self):
+        hidden = Gallery.objects.create(slug="featured", title="Featured", is_published=False)
+        photo = make_photo(gallery=hidden, public_id="h", original_filename="_MG_1.jpg")
+        self.assertNotIn("Featured", photo.alt)
+        self.assertIn("photograph by", photo.alt)
+
+    def test_alt_never_falls_back_to_the_camera_filename(self):
+        # "_MG_6316.jpg" is what a screen reader would read aloud and what
+        # Google Images would index, so it must never reach the alt attribute.
+        photo = make_photo(gallery=self.gallery, original_filename="_MG_6316.jpg")
+        self.assertNotIn("_MG_6316", photo.alt)
+        self.assertNotIn(".jpg", photo.alt)
+        self.assertIn(self.gallery.title, photo.alt)
 
 
 class StorageUrlTests(SimpleTestCase):

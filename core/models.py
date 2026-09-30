@@ -7,6 +7,7 @@ is what removed the multi-second Drive round-trips from every page load.
 
 from __future__ import annotations
 
+import os
 import uuid
 
 from django.db import models
@@ -87,7 +88,26 @@ class Photo(models.Model):
 
     @property
     def alt(self) -> str:
-        return self.caption or self.original_filename or "Photograph"
+        """Descriptive alternative text.
+
+        Never falls back to the camera filename: "_MG_6316.jpg" is what a
+        screen reader would read aloud and what Google Images would index.
+        Set `caption` in the admin to override.
+        """
+        if self.caption:
+            return self.caption
+        owner = ""
+        if self.gallery_id is not None:
+            # An unpublished gallery is an internal grouping ("Featured"), not
+            # something a reader or a search engine should be told about.
+            if self.gallery.is_published:
+                owner = self.gallery.title
+        elif self.album_id is not None:
+            owner = self.album.name
+        where = os.environ.get("PHOTOGRAPHER_LOCATION", "")
+        who = os.environ.get("PHOTOGRAPHER_NAME", "")
+        parts = [p for p in (owner, f"photograph by {who}" if who else "", where) if p]
+        return " — ".join(parts) if parts else "Photograph"
 
     @property
     def aspect_ratio(self) -> str:
@@ -151,6 +171,15 @@ class Photo(models.Model):
     @property
     def sizes_full(self) -> str:
         return SIZES_FULL
+
+    @property
+    def social_src(self) -> str:
+        """1200x630 JPEG used for link previews."""
+        if not photo_store.is_configured:
+            return ""
+        return photo_store.social_url(
+            self.public_id, version=self.version, private=self.is_private
+        )
 
     @property
     def download_url(self) -> str:

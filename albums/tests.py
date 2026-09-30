@@ -32,6 +32,14 @@ class AlbumAccessTests(TestCase):
         self.assertIn("no-store", cache_control)
         self.assertIn("private", cache_control)
 
+    def test_private_album_never_emits_a_link_preview_image(self):
+        # og:image on an album page would hand a signed, working image URL to
+        # every link-preview crawler that touches the secret link.
+        body = self.client.get(self.url).content.decode()
+        self.assertNotIn("og:image", body)
+        self.assertNotIn("twitter:image", body)
+        self.assertIn("noindex", body)
+
     def test_revoked_album_is_not_found(self):
         self.album.is_active = False
         self.album.save()

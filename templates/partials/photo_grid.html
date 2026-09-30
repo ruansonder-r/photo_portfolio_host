@@ -27,7 +27,7 @@ Context: photos, optional show_download + download_url_base.
               aria-label="Open {{ photo.alt }} in the viewer"></button>
 
       <figcaption class="photo__overlay">
-        <span class="photo__name">{{ photo.original_filename }}</span>
+        <span class="photo__name">{{ photo.caption }}</span>
         {% if show_download %}
           <a class="btn btn--sm btn--ghost" data-direct
              href="{{ download_url_base }}{{ photo.id }}/"

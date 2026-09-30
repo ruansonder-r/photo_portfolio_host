@@ -4,8 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>{% block title %}{{ PHOTOGRAPHER_NAME }}{% endblock %}</title>
-  <meta name="description" content="{% block description %}Photography by {{ PHOTOGRAPHER_NAME }} — {{ PHOTOGRAPHER_LOCATION }}.{% endblock %}">
+  {% firstof page_title default_title PHOTOGRAPHER_NAME as meta_title %}
+  {% firstof page_description default_description as meta_description %}
+  <title>{{ meta_title }}</title>
+  <meta name="description" content="{{ meta_description }}">
+  <link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+  {# Link previews. Omitted entirely on private album pages: a signed image
+     URL must never be handed to a link-preview crawler. #}
+  {% if share_image %}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ PHOTOGRAPHER_NAME }}">
+    <meta property="og:title" content="{{ meta_title }}">
+    <meta property="og:description" content="{{ meta_description }}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:image" content="{{ share_image }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="{{ share_image_alt|default:meta_title }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ meta_title }}">
+    <meta name="twitter:description" content="{{ meta_description }}">
+    <meta name="twitter:image" content="{{ share_image }}">
+  {% endif %}
   {% block meta %}{% endblock %}
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">

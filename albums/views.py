@@ -34,13 +34,14 @@ def _get_available_album(album_id) -> ClientAlbum:
 @never_cache
 def album_detail(request, album_id):
     album = _get_available_album(album_id)
-    photos = list(album.photos.all())
+    photos = list(album.photos.select_related("album"))
     return render(
         request,
         "albums/album_detail.html",
         {
             "album": album,
             "photos": photos,
+            "page_title": f"{album.name} — Private album",
             # Per-photo downloads route through our view so a revoked album
             # stops working immediately, rather than handing out raw CDN URLs.
             "download_url_base": reverse(
@@ -95,7 +96,10 @@ def admin_album_list(request):
     albums = ClientAlbum.objects.all().prefetch_related("photos")
     for album in albums:
         album.share_url = request.build_absolute_uri(album.get_absolute_url())
-    return render(request, "albums/admin_list.html", {"albums": albums})
+    return render(
+        request, "albums/admin_list.html",
+        {"albums": albums, "page_title": "Client albums — admin"},
+    )
 
 
 @login_required
@@ -108,5 +112,6 @@ def generate_album_link(request, album_id):
         {
             "album": album,
             "album_url": request.build_absolute_uri(album.get_absolute_url()),
+            "page_title": f"Share “{album.name}”",
         },
     )

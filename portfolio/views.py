@@ -32,38 +32,64 @@ def _published_galleries():
     )
 
 
+def _featured_photos(limit=MAX_CAROUSEL_PHOTOS):
+    # select_related: Photo.alt reads its gallery's title, which would
+    # otherwise be one query per photo.
+    return list(
+        Photo.objects.filter(is_featured=True)
+        .select_related("gallery")
+        .order_by("position", "original_filename")[:limit]
+    )
+
+
+def _share(photo):
+    """Link-preview image for a page, or empty context if there is none."""
+    if not photo:
+        return {}
+    return {"share_image": photo.social_src, "share_image_alt": photo.alt}
+
+
 @public_cache
 def home(request):
     galleries = list(_published_galleries())
-    carousel = list(
-        Photo.objects.filter(is_featured=True).order_by("position", "original_filename")[
-            :MAX_CAROUSEL_PHOTOS
-        ]
-    )
+    carousel = _featured_photos()
     # Fall back to gallery covers so a fresh install is never a blank page.
+    # cover_photo (not cover) because a gallery's cover is often implicit.
     if not carousel:
-        carousel = [g.cover for g in galleries if g.cover_id][:MAX_CAROUSEL_PHOTOS]
+        carousel = [c for c in (g.cover_photo for g in galleries) if c][:MAX_CAROUSEL_PHOTOS]
 
-    return render(
-        request,
-        "portfolio/home.html",
-        {"galleries": galleries, "carousel_photos": carousel},
+    # A link preview must survive having no featured photos at all.
+    share_photo = carousel[0] if carousel else next(
+        (c for c in (g.cover_photo for g in galleries) if c), None
     )
+
+    context = {
+        "galleries": galleries,
+        "carousel_photos": carousel,
+    }
+    context.update(_share(share_photo))
+    return render(request, "portfolio/home.html", context)
 
 
 @public_cache
 def gallery_detail(request, slug):
-    gallery = get_object_or_404(Gallery.objects.published(), slug=slug)
-    photos = list(gallery.photos.all())
+    gallery = get_object_or_404(Gallery.objects.published().select_related("cover"), slug=slug)
+    photos = list(gallery.photos.select_related("gallery"))
     others = list(_published_galleries().exclude(pk=gallery.pk)[:3])
 
-    return render(
-        request,
-        "portfolio/gallery_detail.html",
-        {"gallery": gallery, "photos": photos, "other_galleries": others},
-    )
+    context = {
+        "gallery": gallery,
+        "photos": photos,
+        "other_galleries": others,
+        "page_title": gallery.title,
+        "page_description": gallery.description or None,
+    }
+    context.update(_share(gallery.cover or (photos[0] if photos else None)))
+    return render(request, "portfolio/gallery_detail.html", context)
 
 
 @public_cache
 def contact(request):
-    return render(request, "portfolio/contact.html")
+    context = {"page_title": "Contact"}
+    context.update(_share(next(iter(_featured_photos(1)), None)))
+    return render(request, "portfolio/contact.html", context)

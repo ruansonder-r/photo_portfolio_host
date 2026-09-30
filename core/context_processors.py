@@ -12,4 +12,18 @@ def site_info(request):
         "PHOTOGRAPHER_LOCATION": os.environ.get("PHOTOGRAPHER_LOCATION", "Cape Town, South Africa"),
         "INSTAGRAM_URL": os.environ.get("INSTAGRAM_URL", "https://instagram.com/ruansonder_R"),
         "CURRENT_YEAR": timezone.now().year,
+        "default_title": os.environ.get(
+            "SITE_TITLE",
+            "{name} — Portrait & Wedding Photography, {place}".format(
+                name=os.environ.get("PHOTOGRAPHER_NAME", "Ruansonder_R"),
+                place=os.environ.get("PHOTOGRAPHER_LOCATION", "Cape Town, South Africa").split(",")[0],
+            ),
+        ),
+        "default_description": os.environ.get(
+            "SITE_DESCRIPTION",
+            "Portrait, wedding and event photography by {name} in {place}.".format(
+                name=os.environ.get("PHOTOGRAPHER_NAME", "Ruansonder_R"),
+                place=os.environ.get("PHOTOGRAPHER_LOCATION", "Cape Town, South Africa"),
+            ),
+        ),
     }
