@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="section-head">
+    <p class="section-head__label">Billing</p>
+    <h1>Business settings</h1>
+    <p class="lede">These are copied onto each document when it is issued. Changing them here never alters a document you have already sent.</p>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <p class="section-head__label">Your details</p>
+    <div class="form-grid">
+      {% include 'billing/_field.html' with field=form.business_name %}
+      {% include 'billing/_field.html' with field=form.phone %}
+      {% include 'billing/_field.html' with field=form.email %}
+      {% include 'billing/_field.html' with field=form.address wide=1 %}
+    </div>
+
+    <p class="section-head__label" style="margin-top:2.5rem">VAT</p>
+    <p class="form-help" style="margin-bottom:1rem">
+      Leave this off until your turnover crosses the R1&nbsp;million compulsory registration threshold.
+      With it off, documents are titled “Invoice” and carry no VAT line. Prices are treated as
+      VAT-exclusive, so switching it on adds VAT on top of your line items rather than taking it out of them.
+    </p>
+    <div class="form-grid">
+      {% include 'billing/_field.html' with field=form.vat_registered %}
+      {% include 'billing/_field.html' with field=form.vat_number %}
+      {% include 'billing/_field.html' with field=form.vat_rate %}
+    </div>
+
+    <p class="section-head__label" style="margin-top:2.5rem">Banking</p>
+    <div class="form-grid">
+      {% include 'billing/_field.html' with field=form.account_holder %}
+      {% include 'billing/_field.html' with field=form.bank_name %}
+      {% include 'billing/_field.html' with field=form.account_number %}
+      {% include 'billing/_field.html' with field=form.account_type %}
+      {% include 'billing/_field.html' with field=form.branch_name %}
+      {% include 'billing/_field.html' with field=form.branch_code %}
+      {% include 'billing/_field.html' with field=form.swift_code %}
+    </div>
+
+    <p class="section-head__label" style="margin-top:2.5rem">Defaults</p>
+    <div class="form-grid">
+      {% include 'billing/_field.html' with field=form.default_payment_terms_days %}
+      {% include 'billing/_field.html' with field=form.default_quote_validity_days %}
+      {% include 'billing/_field.html' with field=form.accent_colour %}
+      {% include 'billing/_field.html' with field=form.default_notes wide=1 %}
+    </div>
+
+    <div class="btn-row" style="margin-top:2rem">
+      <button class="btn" type="submit">Save settings</button>
+      <a class="btn btn--ghost" href="{% url 'billing:document_list' %}">← Documents</a>
+    </div>
+  </form>
+{% endblock %}

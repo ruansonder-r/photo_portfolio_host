@@ -53,6 +53,7 @@
           <li><a href="{% url 'portfolio:contact' %}"{% if request.resolver_match.url_name == 'contact' %} aria-current="page"{% endif %}>Contact</a></li>
           {% if user.is_staff %}
             <li><a class="is-admin" href="{% url 'albums:admin_list' %}">Albums</a></li>
+            <li><a class="is-admin" href="{% url 'billing:document_list' %}">Billing</a></li>
             <li><a class="is-admin" href="{% url 'admin:index' %}">Admin</a></li>
           {% endif %}
         </ul>
@@ -62,6 +63,13 @@
 
   <main id="main">
     <div class="container">
+      {% if messages %}
+        <ul class="messages">
+          {% for message in messages %}
+            <li class="notice{% if message.tags == 'error' %} notice--warn{% endif %}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
       {% block content %}{% endblock %}
     </div>
   </main>

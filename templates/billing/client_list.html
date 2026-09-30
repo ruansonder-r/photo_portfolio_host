@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="section-head">
+    <p class="section-head__label">Billing</p>
+    <h1>Clients</h1>
+    <p class="lede">Reusable on any quote or invoice. Their details are copied onto a document when it is issued, so editing a client never changes a document you have already sent.</p>
+  </div>
+
+  <div class="btn-row" style="margin-bottom:1.5rem">
+    <a class="btn" href="{% url 'billing:client_create' %}">New client</a>
+    <a class="btn btn--ghost" href="{% url 'billing:document_list' %}">← Documents</a>
+  </div>
+
+  {% if clients %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Company</th><th>Contact</th><th>Email</th><th>Phone</th><th class="is-numeric">Documents</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for client in clients %}
+            <tr>
+              <td><a href="{{ client.get_absolute_url }}">{{ client.company }}</a></td>
+              <td>{{ client.contact_person|default:"—" }}</td>
+              <td>{{ client.email|default:"—" }}</td>
+              <td>{{ client.phone|default:"—" }}</td>
+              <td class="is-numeric">{{ client.documents.count }}</td>
+              <td><a class="btn btn--sm btn--ghost" href="{% url 'billing:client_edit' client.pk %}">Edit</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty"><h2>No clients yet</h2><p>Add one before you write your first invoice.</p></div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,6 @@
+# Test-only. Never installed into the Vercel bundle.
+-r requirements.txt
+
+# Reads text back out of a generated PDF, so the renderer's output can be
+# asserted on rather than just checked for a %PDF- header.
+pypdf~=6.0

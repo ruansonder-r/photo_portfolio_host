@@ -6,15 +6,12 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
+from core.auth import is_admin_user
 from core.storage import StorageNotConfigured, photo_store
 
 from .models import ClientAlbum
 
 logger = logging.getLogger(__name__)
-
-
-def is_admin_user(user):
-    return user.is_authenticated and user.is_staff
 
 
 def _get_available_album(album_id) -> ClientAlbum:

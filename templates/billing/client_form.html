@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="section-head">
+    <p class="section-head__label">Billing</p>
+    <h1>{% if client %}Edit {{ client.company }}{% else %}New client{% endif %}</h1>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-grid">
+      {% include 'billing/_field.html' with field=form.company %}
+      {% include 'billing/_field.html' with field=form.contact_person %}
+      {% include 'billing/_field.html' with field=form.email %}
+      {% include 'billing/_field.html' with field=form.phone %}
+      {% include 'billing/_field.html' with field=form.address wide=1 %}
+      {% include 'billing/_field.html' with field=form.notes wide=1 %}
+    </div>
+    <div class="btn-row" style="margin-top:2rem">
+      <button class="btn" type="submit">Save client</button>
+      <a class="btn btn--ghost" href="{% url 'billing:client_list' %}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

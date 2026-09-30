@@ -444,3 +444,69 @@ td.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
   .meta-list dt { text-align: center; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
   .meta-list dd { text-align: center; margin-bottom: .9rem; }
 }
+
+/* --- Billing screens ---------------------------------------------------- */
+/* Additions only: the tables, pills, buttons and fields these screens use
+   are the same components the album admin uses. */
+
+.messages { list-style: none; padding: 0; margin: 0 0 2rem; display: grid; gap: .75rem; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.25rem 1.5rem;
+  align-items: start;
+}
+.form-field--wide { grid-column: 1 / -1; }
+.form-field { display: grid; gap: .4rem; }
+.form-field label {
+  font-size: .6875rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+.form-field .field { min-width: 0; }
+.form-field input[type='checkbox'] { width: auto; min-width: 0; justify-self: start; }
+.form-help { font-size: .75rem; color: var(--muted); margin: 0; }
+.form-error { font-size: .75rem; color: #a8442f; margin: 0; }
+.form-field.is-invalid .field { border-color: #a8442f; }
+
+.filters { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1.5rem; }
+.filters .field { width: auto; min-width: 10rem; }
+
+/* Line items share the table component; only the column widths and the
+   in-cell inputs are particular to this screen. */
+.line-items .field { min-width: 0; }
+.line-items td { vertical-align: top; }
+.line-items th:nth-child(2), .line-items td:nth-child(2) { width: 6.5rem; }
+.line-items th:nth-child(3), .line-items td:nth-child(3) { width: 8.5rem; }
+.line-items th:nth-child(4), .line-items td:nth-child(4) { width: 8rem; }
+.line-items th:last-child,  .line-items td:last-child  { width: 5.5rem; }
+.line-items textarea.field { resize: vertical; min-height: 2.4rem; }
+
+.line-remove {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .6875rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  cursor: pointer;
+}
+.line-remove input { accent-color: #a8442f; }
+tr.is-removed { opacity: .4; }
+tr.is-removed .field { text-decoration: line-through; }
+
+tfoot td { border-bottom: 0; padding-top: .6rem; padding-bottom: .6rem; }
+tfoot .is-total td { font-weight: 600; font-size: .9375rem; border-top: 1px solid var(--border); }
+
+.detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1.5rem 3rem;
+}
+.detail-list { display: grid; gap: .7rem; margin: 0; }
+.detail-list > div { display: grid; grid-template-columns: 8rem 1fr; gap: 1rem; align-items: baseline; }
+.detail-list dt {
+  font-size: .6875rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.detail-list dd { margin: 0; font-size: .875rem; }
+@media (max-width: 520px) {
+  .detail-list > div { grid-template-columns: 1fr; gap: .2rem; }
+}
+
+.is-muted { color: var(--muted); }
+.is-mono { font-variant-numeric: tabular-nums; }

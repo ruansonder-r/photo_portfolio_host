@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="section-head">
+    <p class="section-head__label">Billing</p>
+    <h1>Quotes &amp; invoices</h1>
+    <p class="lede">Numbers are allocated when a document is issued, so abandoned drafts never leave a gap.</p>
+  </div>
+
+  <div class="btn-row" style="margin-bottom:1.5rem">
+    <a class="btn" href="{% url 'billing:document_create' %}?kind=invoice">New invoice</a>
+    <a class="btn btn--ghost" href="{% url 'billing:document_create' %}?kind=quote">New quote</a>
+    <a class="btn btn--ghost" href="{% url 'billing:client_list' %}">Clients</a>
+    <a class="btn btn--ghost" href="{% url 'billing:settings' %}">Settings</a>
+  </div>
+
+  <form class="filters" method="get">
+    <label class="visually-hidden" for="filter-kind">Kind</label>
+    <select class="field" id="filter-kind" name="kind">
+      <option value="">All kinds</option>
+      {% for value, label in kinds %}
+        <option value="{{ value }}"{% if kind == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label class="visually-hidden" for="filter-status">Status</label>
+    <select class="field" id="filter-status" name="status">
+      <option value="">All statuses</option>
+      {% for value, label in statuses %}
+        <option value="{{ value }}"{% if status == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn--sm" type="submit">Filter</button>
+    {% if kind or status %}
+      <a class="btn btn--sm btn--ghost" href="{% url 'billing:document_list' %}">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if documents %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Number</th><th>Kind</th><th>Client</th><th>Project</th>
+            <th>Date</th><th class="is-numeric">Total</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for document in documents %}
+            <tr>
+              <td class="is-mono">{{ document.display_number|default:"—" }}</td>
+              <td>{{ document.get_kind_display }}</td>
+              <td>{{ document.client.company|default:"—" }}</td>
+              <td>{{ document.project|default:"—" }}</td>
+              <td>{{ document.issue_date|date:"j M Y" }}</td>
+              <td class="is-numeric">{{ document.total_display }}</td>
+              <td>
+                <span class="pill{% if document.status == 'paid' or document.status == 'accepted' %} pill--on{% elif document.is_expired or document.is_overdue or document.status == 'cancelled' or document.status == 'declined' %} pill--off{% endif %}">{{ document.state_label }}</span>
+              </td>
+              <td>
+                <div class="btn-row" style="flex-wrap:nowrap">
+                  <a class="btn btn--sm btn--ghost" href="{{ document.get_absolute_url }}">Open</a>
+                  <a class="btn btn--sm btn--ghost" href="{% url 'billing:document_pdf' document.pk %}" target="_blank" rel="noopener">PDF</a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <h2>Nothing here yet</h2>
+      <p>{% if kind or status %}No documents match that filter.{% else %}Your first invoice will be number 10000.{% endif %}</p>
+    </div>
+  {% endif %}
+{% endblock %}

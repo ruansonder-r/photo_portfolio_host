@@ -1,5 +1,7 @@
 # Runtime dependencies. Installed by Vercel into the function bundle, so keep
-# this list to what actually serves traffic -- the bundle limit is 225 MB.
+# this list to what actually serves traffic. Fluid Compute allows up to 5 GB
+# per function, so the limit is no longer the constraint it was -- cold-start
+# time is. Test-only packages belong in requirements-dev.txt.
 
 Django~=5.2.4
 psycopg[binary]~=3.2,>=3.2.10
@@ -8,3 +10,7 @@ python-dotenv~=1.0
 whitenoise~=6.8
 cloudinary~=1.41
 Pillow>=11.3,<12
+
+# PDF rendering for quotes and invoices. Pure Python (py3-none-any), 4.7 MB
+# unpacked, no system libraries. Pillow is already here; it needs nothing else.
+reportlab~=5.0

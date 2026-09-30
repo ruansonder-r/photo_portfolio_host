@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="section-head">
+    <p class="section-head__label">Client</p>
+    <h1>{{ client.company }}</h1>
+    {% if client.contact_person %}<p class="lede">Att: {{ client.contact_person }}</p>{% endif %}
+  </div>
+
+  <div class="btn-row" style="margin-bottom:2rem">
+    <a class="btn btn--ghost" href="{% url 'billing:client_edit' client.pk %}">Edit</a>
+    <a class="btn" href="{% url 'billing:document_create' %}?kind=invoice">New invoice</a>
+    <a class="btn btn--ghost" href="{% url 'billing:client_list' %}">← All clients</a>
+  </div>
+
+  <dl class="detail-list">
+    {% if client.email %}<div><dt>Email</dt><dd>{{ client.email }}</dd></div>{% endif %}
+    {% if client.phone %}<div><dt>Phone</dt><dd>{{ client.phone }}</dd></div>{% endif %}
+    {% if client.address %}<div><dt>Address</dt><dd>{{ client.address|linebreaksbr }}</dd></div>{% endif %}
+    {% if client.notes %}<div><dt>Notes</dt><dd>{{ client.notes|linebreaksbr }}<br><span class="is-muted">Internal — never printed.</span></dd></div>{% endif %}
+  </dl>
+
+  <p class="section-head__label" style="margin-top:2.5rem">Documents</p>
+  {% if documents %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Number</th><th>Kind</th><th>Project</th><th>Date</th><th class="is-numeric">Total</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for document in documents %}
+            <tr>
+              <td><a href="{{ document.get_absolute_url }}">{{ document.display_number|default:"draft" }}</a></td>
+              <td>{{ document.get_kind_display }}</td>
+              <td>{{ document.project|default:"—" }}</td>
+              <td>{{ document.issue_date|date:"j M Y" }}</td>
+              <td class="is-numeric">{{ document.total_display }}</td>
+              <td><span class="pill">{{ document.state_label }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="is-muted">Nothing billed to this client yet.</p>
+  {% endif %}
+
+  {% if albums %}
+    <p class="section-head__label" style="margin-top:2.5rem">Client albums</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Album</th><th>Date</th><th class="is-numeric">Photos</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for album in albums %}
+            <tr>
+              <td><a href="{{ album.get_absolute_url }}">{{ album.name }}</a></td>
+              <td>{{ album.date|date:"j M Y" }}</td>
+              <td class="is-numeric">{{ album.photo_count }}</td>
+              <td><span class="pill{% if album.is_available %} pill--on{% else %} pill--off{% endif %}">{% if album.is_available %}Active{% else %}Closed{% endif %}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}

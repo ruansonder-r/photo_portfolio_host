@@ -20,6 +20,19 @@ class ClientAlbum(models.Model):
     date = models.DateField()
     description = models.TextField(blank=True)
 
+    # Optional link to the billing customer. A ClientAlbum is identified by
+    # its `name` -- "Smith Wedding" is a shoot, not a customer -- so this is
+    # nullable and nothing reads it unless it is set. It exists so a client's
+    # shoots and their invoices can be seen together.
+    client = models.ForeignKey(
+        "billing.Client",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="albums",
+        help_text="Optional. Links this shoot to a billing client.",
+    )
+
     is_active = models.BooleanField(
         default=True, help_text="Untick to revoke the client's link immediately"
     )

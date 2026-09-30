@@ -261,6 +261,69 @@
     }
   }
 
+  /* --- Line items on the document form ------------------------------- */
+  /* Add and remove rows against a Django formset, and keep a running total
+     as you type. The figures here are a convenience only -- the server
+     recalculates every one of them on save. */
+
+  function initDocumentForm(form) {
+    var rows = form.querySelector('[data-line-rows]');
+    var template = form.querySelector('[data-empty-line]');
+    var addButton = form.querySelector('[data-add-line]');
+    var totalForms = form.querySelector('[name$="-TOTAL_FORMS"]');
+    if (!rows || !totalForms) return;
+
+    function money(value) {
+      var parts = Math.abs(value).toFixed(2).split('.');
+      var whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return (value < 0 ? '-' : '') + whole + '.' + parts[1];
+    }
+
+    function recalculate() {
+      var subtotal = 0;
+      rows.querySelectorAll('[data-line-row]').forEach(function (row) {
+        var deleted = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        var removed = deleted && deleted.checked;
+        row.classList.toggle('is-removed', !!removed);
+
+        var quantity = parseFloat(row.querySelector('[data-line-quantity]').value) || 0;
+        var price = parseFloat(row.querySelector('[data-line-price]').value) || 0;
+        // Round each line before summing, the way the server does, so the
+        // running figure agrees with the saved one to the cent.
+        var lineTotal = Math.round(quantity * price * 100) / 100;
+
+        row.querySelector('[data-line-total]').textContent = money(lineTotal);
+        if (!removed) subtotal += lineTotal;
+      });
+
+      var adjustmentField = form.querySelector('[name="adjustment_amount"]');
+      var adjustment = adjustmentField ? parseFloat(adjustmentField.value) || 0 : 0;
+
+      var subtotalEl = form.querySelector('[data-running-subtotal]');
+      var totalEl = form.querySelector('[data-running-total]');
+      if (subtotalEl) subtotalEl.textContent = money(subtotal);
+      if (totalEl) totalEl.textContent = money(subtotal + adjustment);
+    }
+
+    function addRow() {
+      var index = parseInt(totalForms.value, 10);
+      var html = template.innerHTML.replace(/__prefix__/g, index);
+      var body = document.createElement('tbody');
+      body.innerHTML = html.trim();
+      var row = body.querySelector('[data-line-row]');
+      rows.appendChild(row);
+      totalForms.value = index + 1;
+      var first = row.querySelector('textarea, input[type="text"]');
+      if (first) first.focus();
+      recalculate();
+    }
+
+    if (addButton) addButton.addEventListener('click', addRow);
+    form.addEventListener('input', recalculate);
+    form.addEventListener('change', recalculate);
+    recalculate();
+  }
+
   /* ------------------------------------------------------------------ */
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -284,5 +347,7 @@
       var button = event.target.closest('[data-copy-target]');
       if (button) copyFrom(button);
     });
+
+    document.querySelectorAll('[data-document-form]').forEach(initDocumentForm);
   });
 })();

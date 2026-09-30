@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="section-head">
+    <p class="section-head__label">{{ document.get_kind_display }}{% if document.project %} · {{ document.project }}{% endif %}</p>
+    <h1>{{ document.title }} {{ document.display_number|default:"draft" }}</h1>
+    <p class="lede">
+      <span class="pill{% if document.status == 'paid' or document.status == 'accepted' %} pill--on{% elif document.is_expired or document.is_overdue or document.status == 'cancelled' or document.status == 'declined' %} pill--off{% endif %}">{{ document.state_label }}</span>
+      {% if document.is_locked %}Issued {{ document.issued_at|date:"j F Y" }} — locked.{% else %}Not yet issued. It takes a number when you issue it.{% endif %}
+    </p>
+  </div>
+
+  {% if document.converted_from %}
+    <p class="notice">Generated from quote <a href="{{ document.converted_from.get_absolute_url }}">{{ document.converted_from.display_number }}</a>.</p>
+  {% endif %}
+  {% if invoice_from_quote %}
+    <p class="notice">Invoiced as <a href="{{ invoice_from_quote.get_absolute_url }}">{{ invoice_from_quote.display_number }}</a>.</p>
+  {% endif %}
+  {% if document.replaces %}
+    <p class="notice">Corrects cancelled invoice <a href="{{ document.replaces.get_absolute_url }}">{{ document.replaces.display_number }}</a>.</p>
+  {% endif %}
+  {% if correction %}
+    <p class="notice">Corrected by <a href="{{ correction.get_absolute_url }}">{{ correction.display_number|default:"a draft" }}</a>.</p>
+  {% endif %}
+
+  <div class="btn-row" style="margin-bottom:2rem">
+    <a class="btn" href="{% url 'billing:document_pdf' document.pk %}" target="_blank" rel="noopener">Open PDF ↗</a>
+
+    {% if document.is_draft %}
+      <a class="btn btn--ghost" href="{% url 'billing:document_edit' document.pk %}">Edit</a>
+      {% if lines %}
+        <form method="post" action="{% url 'billing:document_action' document.pk 'issue' %}">
+          {% csrf_token %}
+          <button class="btn" type="submit">Issue as {{ next_number_display }}</button>
+        </form>
+      {% endif %}
+      <form method="post" action="{% url 'billing:document_delete' document.pk %}" onsubmit="return confirm('Delete this draft? It has no number, so nothing is left behind.')">
+        {% csrf_token %}
+        <button class="btn btn--ghost btn--sm" type="submit">Delete draft</button>
+      </form>
+
+    {% elif document.kind == 'quote' %}
+      {% if document.status == 'sent' and not document.is_expired %}
+        <form method="post" action="{% url 'billing:document_action' document.pk 'accept' %}">
+          {% csrf_token %}<button class="btn" type="submit">Mark accepted</button>
+        </form>
+        <form method="post" action="{% url 'billing:document_action' document.pk 'decline' %}">
+          {% csrf_token %}<button class="btn btn--ghost" type="submit">Mark declined</button>
+        </form>
+      {% endif %}
+      {% if document.status == 'accepted' and not invoice_from_quote %}
+        <form method="post" action="{% url 'billing:document_action' document.pk 'convert' %}"
+              onsubmit="return confirm('Create an invoice from this quote? It is issued immediately and takes the next invoice number.')">
+          {% csrf_token %}<button class="btn" type="submit">Create invoice →</button>
+        </form>
+      {% endif %}
+
+    {% else %}
+      {% if document.status == 'issued' %}
+        <form method="post" action="{% url 'billing:document_action' document.pk 'mark-paid' %}">
+          {% csrf_token %}<button class="btn" type="submit">Mark paid</button>
+        </form>
+        <form method="post" action="{% url 'billing:document_action' document.pk 'cancel' %}"
+              onsubmit="return confirm('Cancel {{ document.display_number }}? It keeps its number and prints as cancelled. You can then reissue a correction.')">
+          {% csrf_token %}<button class="btn btn--ghost" type="submit">Cancel invoice</button>
+        </form>
+      {% endif %}
+      {% if document.status == 'cancelled' and not correction %}
+        <form method="post" action="{% url 'billing:document_action' document.pk 'reissue' %}">
+          {% csrf_token %}<button class="btn" type="submit">Reissue as a correction</button>
+        </form>
+      {% endif %}
+    {% endif %}
+
+    <form method="post" action="{% url 'billing:document_action' document.pk 'duplicate' %}">
+      {% csrf_token %}<button class="btn btn--ghost btn--sm" type="submit">Duplicate</button>
+    </form>
+  </div>
+
+  <div class="detail-grid">
+    <dl class="detail-list">
+      <div><dt>{{ document.client_label }}</dt><dd>
+        {% if document.client %}<a href="{{ document.client.get_absolute_url }}">{{ snapshot.client.company }}</a>{% else %}{{ snapshot.client.company|default:"—" }}{% endif %}
+        {% if snapshot.client.contact_person %}<br><span class="is-muted">Att: {{ snapshot.client.contact_person }}</span>{% endif %}
+      </dd></div>
+      <div><dt>Project</dt><dd>{{ document.project|default:"—" }}</dd></div>
+      <div><dt>Issue date</dt><dd>{{ document.issue_date|date:"j F Y" }}</dd></div>
+      {% if document.due_date %}<div><dt>Due</dt><dd>{{ document.due_date|date:"j F Y" }}</dd></div>{% endif %}
+      {% if document.valid_until %}<div><dt>Valid until</dt><dd>{{ document.valid_until|date:"j F Y" }}</dd></div>{% endif %}
+      {% if document.paid_at %}<div><dt>Paid</dt><dd>{{ document.paid_at|date:"j F Y" }}</dd></div>{% endif %}
+    </dl>
+
+    <dl class="detail-list">
+      <div><dt>Payable to</dt><dd>
+        {% for label, value in snapshot.bank.rows %}{{ label }}: {{ value }}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="is-muted">No banking details set</span>{% endfor %}
+      </dd></div>
+      {% if document.is_locked %}
+        <div><dt>Snapshot</dt><dd class="is-muted">Frozen at issue. Changing your settings will not alter this document.</dd></div>
+      {% endif %}
+    </dl>
+  </div>
+
+  <div class="table-wrap" style="margin-top:2rem">
+    <table>
+      <thead>
+        <tr><th>Description</th><th class="is-numeric">Qty</th><th class="is-numeric">Unit price</th><th class="is-numeric">Total</th></tr>
+      </thead>
+      <tbody>
+        {% for line in lines %}
+          <tr>
+            <td>{{ line.description|linebreaksbr }}</td>
+            <td class="is-numeric">{{ line.quantity_display }}</td>
+            <td class="is-numeric">{{ line.unit_price_display }}</td>
+            <td class="is-numeric">{{ line.line_total_display }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="is-muted">No line items yet.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="3" class="is-numeric is-muted">Subtotal</td><td class="is-numeric">{{ document.subtotal|floatformat:2 }}</td></tr>
+        {% if document.has_adjustment %}
+          <tr><td colspan="3" class="is-numeric is-muted">{{ document.adjustment_label|default:"Adjustment" }}</td><td class="is-numeric">{{ document.adjustment_amount|floatformat:2 }}</td></tr>
+        {% endif %}
+        {% if document.shows_vat %}
+          <tr><td colspan="3" class="is-numeric is-muted">VAT @ {{ snapshot.vat_rate|floatformat:"-2" }}%</td><td class="is-numeric">{{ document.vat_amount|floatformat:2 }}</td></tr>
+        {% endif %}
+        <tr class="is-total"><td colspan="3" class="is-numeric">Total</td><td class="is-numeric">{{ document.total_display }}</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  {% if document.notes %}
+    <div class="section" style="margin-top:2rem">
+      <p class="section-head__label">Notes</p>
+      <p>{{ document.notes|linebreaksbr }}</p>
+    </div>
+  {% endif %}
+
+  <p style="margin-top:2.5rem"><a class="btn btn--ghost btn--sm" href="{% url 'billing:document_list' %}">← All documents</a></p>
+{% endblock %}
